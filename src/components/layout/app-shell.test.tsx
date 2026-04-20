@@ -34,6 +34,7 @@ const rawSkills: SkillDetail[] = [
     updatedAt: "2026-04-20T12:00:00.000Z",
     content: "# Frontend Skill\n\nBuild modern interfaces.",
     contentHash: "hash-frontend",
+    pathKind: "directory",
     relatedFiles: [],
   },
 ];
@@ -57,14 +58,22 @@ describe("AppShell", () => {
         skills={skills}
         selectedSkill={null}
         search=""
-        selectedStatus="all"
+        selectedInstallationState="all"
         selectedToolKind="all"
+        selectedSourceId="all"
+        selectedSkillIds={[]}
+        batchBusy={false}
         onSearchChange={vi.fn()}
         onRefresh={vi.fn()}
         onAddFolder={vi.fn()}
-        onSelectStatus={vi.fn()}
+        onSelectInstallationState={vi.fn()}
         onSelectToolKind={vi.fn()}
+        onSelectSource={vi.fn()}
         onSelectSkill={vi.fn()}
+        onToggleSkillSelection={vi.fn()}
+        onToggleSelectAllVisible={vi.fn()}
+        onClearSelection={vi.fn()}
+        onBatchApply={vi.fn()}
         onOpenPath={vi.fn()}
         onToggleApp={vi.fn()}
       />,
@@ -84,14 +93,22 @@ describe("AppShell", () => {
         skills={skills}
         selectedSkill={skills[0]}
         search=""
-        selectedStatus="all"
+        selectedInstallationState="all"
         selectedToolKind="all"
+        selectedSourceId="all"
+        selectedSkillIds={[]}
+        batchBusy={false}
         onSearchChange={vi.fn()}
         onRefresh={vi.fn()}
         onAddFolder={vi.fn()}
-        onSelectStatus={vi.fn()}
+        onSelectInstallationState={vi.fn()}
         onSelectToolKind={vi.fn()}
+        onSelectSource={vi.fn()}
         onSelectSkill={vi.fn()}
+        onToggleSkillSelection={vi.fn()}
+        onToggleSelectAllVisible={vi.fn()}
+        onClearSelection={vi.fn()}
+        onBatchApply={vi.fn()}
         onOpenPath={vi.fn()}
         onToggleApp={vi.fn()}
       />,
@@ -123,14 +140,22 @@ describe("AppShell", () => {
         skills={skills}
         selectedSkill={null}
         search=""
-        selectedStatus="all"
+        selectedInstallationState="all"
         selectedToolKind="all"
+        selectedSourceId="all"
+        selectedSkillIds={[]}
+        batchBusy={false}
         onSearchChange={vi.fn()}
         onRefresh={vi.fn()}
         onAddFolder={vi.fn()}
-        onSelectStatus={vi.fn()}
+        onSelectInstallationState={vi.fn()}
         onSelectToolKind={vi.fn()}
+        onSelectSource={vi.fn()}
         onSelectSkill={vi.fn()}
+        onToggleSkillSelection={vi.fn()}
+        onToggleSelectAllVisible={vi.fn()}
+        onClearSelection={vi.fn()}
+        onBatchApply={vi.fn()}
         onOpenPath={vi.fn()}
         onToggleApp={vi.fn()}
       />,
@@ -149,14 +174,22 @@ describe("AppShell", () => {
         skills={skills}
         selectedSkill={skills[0]}
         search=""
-        selectedStatus="all"
+        selectedInstallationState="all"
         selectedToolKind="all"
+        selectedSourceId="all"
+        selectedSkillIds={[]}
+        batchBusy={false}
         onSearchChange={vi.fn()}
         onRefresh={vi.fn()}
         onAddFolder={vi.fn()}
-        onSelectStatus={vi.fn()}
+        onSelectInstallationState={vi.fn()}
         onSelectToolKind={vi.fn()}
+        onSelectSource={vi.fn()}
         onSelectSkill={vi.fn()}
+        onToggleSkillSelection={vi.fn()}
+        onToggleSelectAllVisible={vi.fn()}
+        onClearSelection={vi.fn()}
+        onBatchApply={vi.fn()}
         onOpenPath={vi.fn()}
         onToggleApp={vi.fn()}
       />,
@@ -179,14 +212,22 @@ describe("AppShell", () => {
         skills={skills}
         selectedSkill={skills[0]}
         search=""
-        selectedStatus="all"
+        selectedInstallationState="all"
         selectedToolKind="all"
+        selectedSourceId="all"
+        selectedSkillIds={[]}
+        batchBusy={false}
         onSearchChange={vi.fn()}
         onRefresh={vi.fn()}
         onAddFolder={vi.fn()}
-        onSelectStatus={vi.fn()}
+        onSelectInstallationState={vi.fn()}
         onSelectToolKind={vi.fn()}
+        onSelectSource={vi.fn()}
         onSelectSkill={vi.fn()}
+        onToggleSkillSelection={vi.fn()}
+        onToggleSelectAllVisible={vi.fn()}
+        onClearSelection={vi.fn()}
+        onBatchApply={vi.fn()}
         onOpenPath={vi.fn()}
         onToggleApp={onToggleApp}
       />,
@@ -209,14 +250,22 @@ describe("AppShell", () => {
         skills={skills}
         selectedSkill={skills[0]}
         search=""
-        selectedStatus="all"
+        selectedInstallationState="all"
         selectedToolKind="all"
+        selectedSourceId="all"
+        selectedSkillIds={[]}
+        batchBusy={false}
         onSearchChange={vi.fn()}
         onRefresh={vi.fn()}
         onAddFolder={vi.fn()}
-        onSelectStatus={vi.fn()}
+        onSelectInstallationState={vi.fn()}
         onSelectToolKind={onSelectToolKind}
+        onSelectSource={vi.fn()}
         onSelectSkill={vi.fn()}
+        onToggleSkillSelection={vi.fn()}
+        onToggleSelectAllVisible={vi.fn()}
+        onClearSelection={vi.fn()}
+        onBatchApply={vi.fn()}
         onOpenPath={vi.fn()}
         onToggleApp={vi.fn()}
       />,
@@ -237,14 +286,22 @@ describe("AppShell", () => {
         skills={skills}
         selectedSkill={skills[0]}
         search=""
-        selectedStatus="all"
+        selectedInstallationState="all"
         selectedToolKind="codex"
+        selectedSourceId="all"
+        selectedSkillIds={[]}
+        batchBusy={false}
         onSearchChange={vi.fn()}
         onRefresh={vi.fn()}
         onAddFolder={vi.fn()}
-        onSelectStatus={vi.fn()}
+        onSelectInstallationState={vi.fn()}
         onSelectToolKind={vi.fn()}
+        onSelectSource={vi.fn()}
         onSelectSkill={vi.fn()}
+        onToggleSkillSelection={vi.fn()}
+        onToggleSelectAllVisible={vi.fn()}
+        onClearSelection={vi.fn()}
+        onBatchApply={vi.fn()}
         onOpenPath={vi.fn()}
         onToggleApp={vi.fn()}
       />,
@@ -254,5 +311,46 @@ describe("AppShell", () => {
       "Codex: 26",
     );
     expect(screen.getByText("1")).toBeVisible();
+  });
+
+  test("opens top filters and forwards installation state selection", () => {
+    const onSelectInstallationState = vi.fn();
+
+    render(
+      <AppShell
+        loading={false}
+        isDemoMode={false}
+        sources={sources}
+        appCounts={appCounts}
+        skills={skills}
+        selectedSkill={skills[0]}
+        search=""
+        selectedInstallationState="all"
+        selectedToolKind="all"
+        selectedSourceId="all"
+        selectedSkillIds={[]}
+        batchBusy={false}
+        onSearchChange={vi.fn()}
+        onRefresh={vi.fn()}
+        onAddFolder={vi.fn()}
+        onSelectInstallationState={onSelectInstallationState}
+        onSelectToolKind={vi.fn()}
+        onSelectSource={vi.fn()}
+        onSelectSkill={vi.fn()}
+        onToggleSkillSelection={vi.fn()}
+        onToggleSelectAllVisible={vi.fn()}
+        onClearSelection={vi.fn()}
+        onBatchApply={vi.fn()}
+        onOpenPath={vi.fn()}
+        onToggleApp={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "打开筛选" }));
+    fireEvent.change(screen.getByLabelText("安装状态筛选"), {
+      target: { value: "conflict" },
+    });
+
+    expect(onSelectInstallationState).toHaveBeenCalledWith("conflict");
   });
 });

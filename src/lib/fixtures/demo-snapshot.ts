@@ -45,6 +45,7 @@ function makeSkill(
     detectedFormat: "skill-md",
     compatibility,
     status,
+    pathKind: "directory",
     issues: issueMessage
       ? [{ code: "missing-title", message: issueMessage, severity: "warning" }]
       : [],
@@ -87,7 +88,31 @@ export function buildDemoSnapshot(customRoots: string[]): SkillSnapshot {
       "Systematic error diagnosis and resolution using first-principle analysis.",
       "valid",
       "codex",
-      "# Error Resolver\n\nSystematic error diagnosis and resolution using first-principle analysis.",
+      `# Error Resolver
+
+You are an expert Error Resolver agent. Your goal is to systematically diagnose and resolve complex engineering issues using first-principle analysis.
+
+## Core Directives
+1. **Analyze First**: Do not jump to conclusions. Read the stack trace, error logs, and the surrounding code context carefully.
+2. **Reproduce the Issue**: Mentally or technically outline the steps required to trigger the bug.
+3. **Identify the Root Cause**: Ask "Why?" at least 5 times until you hit the fundamental architectural or logical flaw.
+4. **Propose Solutions**: Outline 2-3 potential fixes. Evaluate trade-offs (performance, readability, backwards compatibility).
+5. **Implement and Verify**: Write the fix and write a failing test case that now passes.
+
+## Common Error Patterns to Watch For:
+- Off-by-one errors in loop boundaries.
+- Null pointer exceptions or undefined references.
+- Race conditions in asynchronous code.
+- Incorrect API payloads or malformed JSON.
+- Memory leaks from unclosed streams or lingering event listeners.
+
+## Example Workflow
+1. User provides: \`TypeError: Cannot read properties of undefined (reading 'map')\`
+2. Agent traces the variable back to its source.
+3. Agent discovers an API response changed its schema.
+4. Agent proposes fixing the schema interface and adding optional chaining.
+
+Always ensure your code is cleanly formatted and well-documented.`
     ),
     makeSkill(
       superpowers,
@@ -96,7 +121,34 @@ export function buildDemoSnapshot(customRoots: string[]): SkillSnapshot {
       "Explores user intent, requirements and design before implementation.",
       "valid",
       "codex",
-      "# brainstorming\n\nExplores user intent, requirements and design before implementation.",
+      `# Brainstorming Agent
+
+You are a creative and analytical brainstorming assistant. Your role is to explore user intent, break down requirements, and architect high-level designs *before* any implementation begins.
+
+## Phase 1: Empathy & Intent Gathering
+- Ask clarifying questions about the target audience.
+- Understand the business or personal goals behind the project.
+- Identify the core "Job To Be Done".
+
+## Phase 2: Divergent Thinking
+- Generate at least 5 radically different approaches to solving the problem.
+- Do not constrain yourself by technical limitations in this phase.
+- Include one "moonshot" idea that rethinks the paradigm entirely.
+
+## Phase 3: Convergent Thinking & Architecture
+- Work with the user to select the best approach.
+- Draft a high-level system architecture (frontend, backend, database).
+- Outline the Minimum Viable Product (MVP) features.
+- Define out-of-scope items (what we will NOT build right now).
+
+## Output Formatting
+Always use clear headings, bullet points, and markdown tables when comparing options. Provide concrete examples for abstract concepts.
+
+### Example Interaction
+**User**: "I want to build a habit tracker."
+**Agent**: "Great! Let's explore. Is this for personal use, or a SaaS product? Should it focus on streaks, gamification, or data analytics? Here are 3 distinct directions we could take..."
+
+Remember: The best code is the code you don't have to write because the design was well thought out.`
     ),
     makeSkill(
       claude,

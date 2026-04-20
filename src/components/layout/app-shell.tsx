@@ -1,7 +1,9 @@
+import { useState } from "react";
+
 import type {
   AggregatedInstalledSkill,
   AppKind,
-  SkillStatus,
+  InstallationState,
   SourceRecord,
   ToolKind,
 } from "../../lib/models/skill";
@@ -15,15 +17,23 @@ interface AppShellProps {
   appCounts: Record<AppKind, number>;
   skills: AggregatedInstalledSkill[];
   selectedSkill: AggregatedInstalledSkill | null;
+  selectedSkillIds: string[];
   search: string;
-  selectedStatus: SkillStatus | "all";
+  selectedSourceId: string | "all";
+  selectedInstallationState: InstallationState | "all";
   selectedToolKind: ToolKind | "all";
+  batchBusy: boolean;
   onSearchChange: (value: string) => void;
   onRefresh: () => void;
   onAddFolder: () => void;
-  onSelectStatus: (status: SkillStatus | "all") => void;
+  onSelectInstallationState: (status: InstallationState | "all") => void;
   onSelectToolKind: (toolKind: ToolKind | "all") => void;
-  onSelectSkill: (skillId: string) => void;
+  onSelectSource: (sourceId: string | "all") => void;
+  onSelectSkill: (skillId: string | null) => void;
+  onToggleSkillSelection: (skillId: string) => void;
+  onToggleSelectAllVisible: () => void;
+  onClearSelection: () => void;
+  onBatchApply: (app: AppKind, enabled: boolean) => void;
   onOpenPath: (path: string) => void;
   onToggleApp: (skillId: string, app: AppKind, enabled: boolean) => void;
 }
@@ -35,24 +45,38 @@ export function AppShell({
   appCounts,
   skills,
   selectedSkill,
+  selectedSkillIds,
   search,
-  selectedStatus,
+  selectedSourceId,
+  selectedInstallationState,
   selectedToolKind,
+  batchBusy,
   onSearchChange,
   onRefresh,
   onAddFolder,
-  onSelectStatus,
+  onSelectInstallationState,
   onSelectToolKind,
+  onSelectSource,
   onSelectSkill,
+  onToggleSkillSelection,
+  onToggleSelectAllVisible,
+  onClearSelection,
+  onBatchApply,
   onOpenPath,
   onToggleApp,
 }: AppShellProps) {
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const appFilters: Array<{ key: AppKind; label: string; count: number; className: string }> = [
     { key: "claude", label: "Claude", count: appCounts.claude, className: "is-claude" },
     { key: "codex", label: "Codex", count: appCounts.codex, className: "is-codex" },
     { key: "gemini", label: "Gemini", count: appCounts.gemini, className: "is-gemini" },
     { key: "opencode", label: "OpenCode", count: appCounts.opencode, className: "is-opencode" },
   ];
+  const activeFilterCount = [
+    selectedToolKind !== "all",
+    selectedInstallationState !== "all",
+    selectedSourceId !== "all",
+  ].filter(Boolean).length;
 
   return (
     <main className="app-shell">
@@ -85,61 +109,122 @@ export function AppShell({
               aria-label="Search skills"
               id="skill-search"
               onChange={(event) => onSearchChange(event.currentTarget.value)}
-              placeholder="搜索名称、摘要或来源"
+              placeholder="搜索标题、摘要或来源目录"
               value={search}
             />
           </label>
         </div>
-        <div className="summary-pills">
-          {appFilters.map((app) => (
-            <button
-              key={app.key}
-              aria-label={`按 ${app.label} 筛选`}
-              className={
-                selectedToolKind === app.key
-                  ? `summary-pill ${app.className} is-active`
-                  : `summary-pill ${app.className}`
-              }
-              onClick={() =>
-                onSelectToolKind(selectedToolKind === app.key ? "all" : app.key)
-              }
-              type="button"
-            >
-              {app.label}: {app.count}
-            </button>
-          ))}
+        <div className="summary-actions">
+          <button
+            aria-label="打开筛选"
+            className={activeFilterCount > 0 || filtersOpen ? "chip is-active" : "chip"}
+            onClick={() => setFiltersOpen((current) => !current)}
+            type="button"
+          >
+            筛选{activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
+          </button>
+          <div className="summary-pills">
+            {appFilters.map((app) => (
+              <button
+                key={app.key}
+                aria-label={`按 ${app.label} 筛选`}
+                className={
+                  selectedToolKind === app.key
+                    ? `summary-pill ${app.className} is-active`
+                    : `summary-pill ${app.className}`
+                }
+                onClick={() =>
+                  onSelectToolKind(selectedToolKind === app.key ? "all" : app.key)
+                }
+                type="button"
+              >
+                {app.label}: {app.count}
+              </button>
+            ))}
+          </div>
         </div>
       </section>
 
-      {isDemoMode ? (
-        <section className="demo-banner">
-          当前是浏览器预览模式，列表使用演示数据。请运行桌面端以扫描本机 skills。
+
+
+      {filtersOpen || activeFilterCount > 0 ? (
+        <section className="filters-row">
+          <label className="filter-field">
+            <span>安装状态</span>
+            <select
+              aria-label="安装状态筛选"
+              onChange={(event) =>
+                onSelectInstallationState(
+                  event.currentTarget.value as InstallationState | "all",
+                )
+              }
+              value={selectedInstallationState}
+            >
+              <option value="all">全部状态</option>
+              <option value="ready">正常</option>
+              <option value="attention">异常</option>
+              <option value="conflict">内容冲突</option>
+              <option value="linked">符号链接</option>
+              <option value="external">未知来源</option>
+            </select>
+          </label>
+          <label className="filter-field">
+            <span>来源目录</span>
+            <select
+              aria-label="来源目录筛选"
+              onChange={(event) => onSelectSource(event.currentTarget.value as string | "all")}
+              value={selectedSourceId}
+            >
+              <option value="all">全部来源</option>
+              {sources.map((source) => (
+                <option key={source.id} value={source.id}>
+                  {source.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button
+            className="chip"
+            onClick={() => {
+              onSelectInstallationState("all");
+              onSelectToolKind("all");
+              onSelectSource("all");
+              setFiltersOpen(false);
+            }}
+            type="button"
+          >
+            清空筛选
+          </button>
         </section>
       ) : null}
 
-      <section className="filters-row">
-        <select
-          onChange={(event) => onSelectStatus(event.currentTarget.value as SkillStatus | "all")}
-          value={selectedStatus}
-        >
-          <option value="all">全部状态</option>
-          <option value="valid">valid</option>
-          <option value="warning">warning</option>
-          <option value="invalid">invalid</option>
-        </select>
-      </section>
-
       <div className="workspace-grid">
         <SkillsList
+          batchBusy={batchBusy}
           loading={loading}
+          onBatchApply={onBatchApply}
+          onClearSelection={onClearSelection}
           onSelectSkill={onSelectSkill}
+          onToggleSelectAllVisible={onToggleSelectAllVisible}
+          onToggleSkillSelection={onToggleSkillSelection}
           onToggleApp={onToggleApp}
           selectedSkillId={selectedSkill?.id ?? null}
+          selectedSkillIds={selectedSkillIds}
           skills={skills}
           sources={sources}
         />
-        <SkillDetailPanel onOpenPath={onOpenPath} skill={selectedSkill} />
       </div>
+
+      {selectedSkill ? (
+        <div className="modal-overlay" onClick={() => onSelectSkill(null)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <button aria-label="关闭" className="modal-close-btn" onClick={() => onSelectSkill(null)} type="button">
+              ×
+            </button>
+            <SkillDetailPanel onOpenPath={onOpenPath} skill={selectedSkill} />
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 }

@@ -36,6 +36,7 @@ const skills: SkillSummary[] = [
     detectedFormat: "skill-md",
     compatibility: "codex",
     status: "valid",
+    pathKind: "directory",
     issues: [],
     preview: "Build modern interfaces.",
     updatedAt: "2026-04-20T10:00:00.000Z",
@@ -51,6 +52,7 @@ const skills: SkillSummary[] = [
     detectedFormat: "skill-md",
     compatibility: "claude",
     status: "warning",
+    pathKind: "directory",
     issues: [
       {
         code: "missing-title",

@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skills-Dock - 你的终极 AI 技能工作台</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+
+    <!-- 导航栏 -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="logo">
+                <img src="logo.png" alt="Skills-Dock Logo" class="logo-icon">
+                <span class="logo-text">Skills-Dock</span>
+            </div>
+            <div class="nav-links">
+                <a href="#features">核心功能</a>
+                <a href="#how-it-works">使用指南</a>
+                <a href="https://github.com/1lck/Skills-Dock" target="_blank" class="btn btn-primary">
+                    <i data-lucide="github"></i> 访问 GitHub
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 英雄首屏 -->
+    <header class="hero">
+        <div class="hero-content">
+            <div class="badge fade-up">V 1.0 正式版</div>
+            <h1 class="fade-up" style="animation-delay: 0.1s;">为 AI 时代打造的<br><span class="text-gradient">统一技能总线</span></h1>
+            <p class="hero-subtitle fade-up" style="animation-delay: 0.2s;">
+                打破平台孤岛，集中管理所有主流 AI 工具的专属 Skills。<br>以清晰高效的聚合面板，直观统筹与分发你的核心技能矩阵。
+            </p>
+            <div class="hero-actions fade-up" style="animation-delay: 0.3s;">
+                <a href="https://github.com/1lck/Skills-Dock" target="_blank" class="btn btn-large btn-gradient">
+                    <i data-lucide="download"></i> 免费获取开源版
+                </a>
+                <a href="#features" class="btn btn-large btn-outline">
+                    了解更多
+                </a>
+            </div>
+        </div>
+        
+        <!-- UI 预览面板展示 (真实应用截图) -->
+        <div class="hero-mockup fade-up" style="animation-delay: 0.5s;">
+            <div class="screenshot-wrapper">
+                <img src="screenshot-main.png" alt="Skills-Dock App Screenshot" class="app-screenshot">
+            </div>
+        </div>
+    </header>
+
+    <!-- 核心功能区 -->
+    <section id="features" class="features">
+        <div class="section-header reveal">
+            <h2>为什么选择 Skills-Dock？</h2>
+            <p>专为需要驾驭多个底层 AI 模型引擎的高阶开发者与提示词工程师设计，实现前所未有的全局视野。</p>
+        </div>
+        <div class="feature-grid">
+            <div class="feature-card reveal">
+                <div class="feature-icon"><i data-lucide="layout-grid"></i></div>
+                <h3>一站式集中管理</h3>
+                <p>彻底告别散落在不同工具中的零散文件夹。无论你的技能存放在 ~/.claude 还是 ~/.gemini，Skills-Dock 都能跨平台扫描，为你建立统一的中央控制台。</p>
+            </div>
+            <div class="feature-card reveal" style="transition-delay: 0.1s;">
+                <div class="feature-icon"><i data-lucide="layers"></i></div>
+                <h3>多工具状态直观化</h3>
+                <p>直观对比和查看同一个 Skill 在不同 AI 工具下的安装和校验状态。通过智能合并列表，一目了然地掌握哪些指令在哪些模型中已就绪、哪些存在差异。</p>
+            </div>
+            <div class="feature-card reveal" style="transition-delay: 0.2s;">
+                <div class="feature-icon"><i data-lucide="zap"></i></div>
+                <h3>极简且强大的交互体验</h3>
+                <p>化繁为简。我们将底层的复杂目录和配置转化为直观的可视化卡片，让你能以最高效的方式配置、浏览和运行你的专属 AI 技能矩阵。</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- 深入详情展示 -->
+    <section class="showcase">
+        <div class="showcase-container">
+            <div class="showcase-text reveal">
+                <h2>直观穿透多平台的底层指令</h2>
+                <p>在技能详情页，你可以一眼看穿该指令在各个引擎中的真实安装位置与 Hash 校验结果。配合内置极速的 Markdown 引擎，长篇系统指令也能以最完美的排版展示，拒绝枯燥的控制台体验。</p>
+                <ul class="check-list">
+                    <li><i data-lucide="check-circle-2"></i> 专为开发者优化的代码等宽排版</li>
+                    <li><i data-lucide="check-circle-2"></i> 一键无感复制指令内容</li>
+                    <li><i data-lucide="check-circle-2"></i> 支持自动重索引</li>
+                </ul>
+            </div>
+            <div class="showcase-image reveal">
+                <div class="detail-screenshot-wrapper">
+                    <img src="screenshot-detail.png" alt="Skills-Dock Detail Panel" class="app-screenshot">
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 呼唤行动 -->
+    <section id="how-it-works" class="cta-section">
+        <div class="cta-container reveal">
+            <h2>准备好升级你的 AI 工作流了吗？</h2>
+            <p>立刻前往 GitHub 下载源码，基于 Tauri 构建属于你的桌面端应用。</p>
+            <a href="https://github.com/1lck/Skills-Dock" target="_blank" class="btn btn-large btn-black">
+                <i data-lucide="github"></i> 获取 Skills-Dock
+            </a>
+        </div>
+    </section>
+
+    <!-- 页脚 -->
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-logo">
+                <img src="logo.png" alt="Skills-Dock Logo" class="logo-icon small">
+                <span class="logo-text">Skills-Dock</span>
+            </div>
+            <div class="footer-links">
+                <a href="https://github.com/1lck/Skills-Dock">GitHub 仓库</a>
+                <a href="#">使用文档</a>
+                <a href="#">关于我们</a>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2026 Skills-Dock Project. Open Sourced.</p>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>

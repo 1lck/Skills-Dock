@@ -23,6 +23,11 @@ fn toggle_app_install(request: ToggleAppInstallRequest) -> Result<(), String> {
     scan::toggle_app_install(&request).map_err(|error| error.to_string())
 }
 
+#[tauri::command]
+fn toggle_app_installs(requests: Vec<ToggleAppInstallRequest>) -> Result<(), String> {
+    scan::toggle_app_installs(&requests).map_err(|error| error.to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -32,7 +37,8 @@ pub fn run() {
             load_sources,
             scan_sources,
             open_path,
-            toggle_app_install
+            toggle_app_install,
+            toggle_app_installs
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

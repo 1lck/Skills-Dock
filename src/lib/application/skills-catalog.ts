@@ -1,6 +1,7 @@
 import type {
   AggregatedInstalledSkill,
   AppKind,
+  InstallationState,
   InstalledAppState,
   SkillDetail,
   SkillStatus,
@@ -43,6 +44,7 @@ export function aggregateInstalledSkills(
         canonicalId,
         name: primaryInstallation?.name ?? entries[0]?.name ?? canonicalId,
         status,
+        installationState: deriveInstallationState(entries),
         preview,
         updatedAt,
         apps,
@@ -57,6 +59,7 @@ export function aggregateInstalledSkills(
             skillPath: entry.skillPath,
             skillFilePath: entry.skillFilePath,
             status: entry.status,
+            pathKind: entry.pathKind,
             contentHash: entry.contentHash,
             updatedAt: entry.updatedAt,
           })),
@@ -113,6 +116,29 @@ function deriveAggregateStatus(statuses: SkillStatus[]): SkillStatus {
   }
 
   return "valid";
+}
+
+function deriveInstallationState(entries: SkillDetail[]): InstallationState {
+  const appEntries = entries.filter((entry) => isAppKind(entry.toolKind));
+  const appHashes = new Set(appEntries.map((entry) => entry.contentHash));
+
+  if (appEntries.length > 1 && appHashes.size > 1) {
+    return "conflict";
+  }
+
+  if (entries.some((entry) => entry.status !== "valid")) {
+    return "attention";
+  }
+
+  if (appEntries.some((entry) => entry.pathKind === "symlink")) {
+    return "linked";
+  }
+
+  if (appEntries.length === 0) {
+    return "external";
+  }
+
+  return "ready";
 }
 
 function statusRank(status: SkillStatus): number {

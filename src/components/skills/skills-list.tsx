@@ -9,7 +9,13 @@ interface SkillsListProps {
   sources: SourceRecord[];
   loading: boolean;
   selectedSkillId: string | null;
+  selectedSkillIds: string[];
+  batchBusy: boolean;
   onSelectSkill: (skillId: string) => void;
+  onToggleSkillSelection: (skillId: string) => void;
+  onToggleSelectAllVisible: () => void;
+  onClearSelection: () => void;
+  onBatchApply: (app: AppKind, enabled: boolean) => void;
   onToggleApp: (skillId: string, app: AppKind, enabled: boolean) => void;
 }
 
@@ -18,9 +24,19 @@ export function SkillsList({
   sources,
   loading,
   selectedSkillId,
+  selectedSkillIds,
+  batchBusy,
   onSelectSkill,
+  onToggleSkillSelection,
+  onToggleSelectAllVisible,
+  onClearSelection,
+  onBatchApply,
   onToggleApp,
 }: SkillsListProps) {
+  const selectedCount = selectedSkillIds.length;
+  const allVisibleSelected =
+    skills.length > 0 && skills.every((skill) => selectedSkillIds.includes(skill.id));
+
   return (
     <section aria-label="Skills" className="skills-panel">
       <div className="section-heading">
@@ -40,27 +56,36 @@ export function SkillsList({
         ) : null}
 
         {skills.map((skill) => (
-          <button
+          <div
             key={skill.id}
             className={selectedSkillId === skill.id ? "skill-row is-active" : "skill-row"}
-            onClick={() => onSelectSkill(skill.id)}
-            type="button"
           >
-            <div className="skill-copy">
-              <div className="skill-title-line">
-                <strong>{skill.name}</strong>
+            <button className="skill-row-main" onClick={() => onSelectSkill(skill.id)} type="button">
+              <div className="skill-copy">
+                <div className="skill-title-line">
+                  <strong>{skill.name}</strong>
+                </div>
               </div>
-            </div>
+            </button>
             <div className="skill-meta">
-              <span className={`badge status is-${skill.status}`}>{skill.status}</span>
+              <span className={`badge status is-${skill.installationState}`}>
+                {labelForInstallationState(skill.installationState)}
+              </span>
               <AppStatusRail skill={skill} sources={sources} onToggleApp={onToggleApp} />
             </div>
-          </button>
+          </div>
         ))}
       </div>
     </section>
   );
 }
+
+const APP_LIST = [
+  { key: "claude", label: "Claude" },
+  { key: "codex", label: "Codex" },
+  { key: "gemini", label: "Gemini" },
+  { key: "opencode", label: "OpenCode" },
+] satisfies Array<{ key: AppKind; label: string }>;
 
 function AppStatusRail({
   skill,
@@ -89,10 +114,7 @@ function AppStatusRail({
           key={app.key}
           aria-label={`切换 ${labelForApp(app.key)} 安装状态`}
           className={app.active ? "app-pill is-active" : "app-pill"}
-          onClick={(event) => {
-            event.stopPropagation();
-            onToggleApp(skill.canonicalId, app.key, !app.active);
-          }}
+          onClick={() => onToggleApp(skill.canonicalId, app.key, !app.active)}
           title={app.key}
           type="button"
         >
@@ -114,5 +136,20 @@ function labelForApp(app: AppKind): string {
       return "Gemini";
     case "opencode":
       return "OpenCode";
+  }
+}
+
+function labelForInstallationState(state: AggregatedInstalledSkill["installationState"]): string {
+  switch (state) {
+    case "ready":
+      return "正常";
+    case "attention":
+      return "异常";
+    case "conflict":
+      return "冲突";
+    case "linked":
+      return "链接";
+    case "external":
+      return "外部";
   }
 }

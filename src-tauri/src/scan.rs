@@ -1,7 +1,5 @@
 use std::{
-    env,
-    fs,
-    io,
+    env, fs, io,
     path::{Path, PathBuf},
     process::Command,
     time::SystemTime,
@@ -140,12 +138,21 @@ pub fn toggle_app_install(request: &ToggleAppInstallRequest) -> io::Result<()> {
     toggle_app_install_in_home(request, None)
 }
 
+pub fn toggle_app_installs(requests: &[ToggleAppInstallRequest]) -> io::Result<()> {
+    toggle_app_installs_in_home(requests, None)
+}
+
 fn toggle_app_install_in_home(
     request: &ToggleAppInstallRequest,
     home_override: Option<&Path>,
 ) -> io::Result<()> {
-    let target_root = builtin_root_for_app(&request.target_app, home_override)
-        .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "generic target app is unsupported"))?;
+    let target_root =
+        builtin_root_for_app(&request.target_app, home_override).ok_or_else(|| {
+            io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "generic target app is unsupported",
+            )
+        })?;
     let target_skill_path = Path::new(&target_root).join(&request.skill_id);
 
     if request.enabled {
@@ -167,6 +174,17 @@ fn toggle_app_install_in_home(
 
     if target_skill_path.exists() {
         fs::remove_dir_all(target_skill_path)?;
+    }
+
+    Ok(())
+}
+
+fn toggle_app_installs_in_home(
+    requests: &[ToggleAppInstallRequest],
+    home_override: Option<&Path>,
+) -> io::Result<()> {
+    for request in requests {
+        toggle_app_install_in_home(request, home_override)?;
     }
 
     Ok(())
@@ -285,6 +303,7 @@ fn build_skill(source: &SourceInput, root: &Path, skill_dir: &Path) -> io::Resul
         detected_format: "skill-md".into(),
         compatibility,
         status: derive_status(&issues).into(),
+        path_kind: path_kind_for_skill_dir(skill_dir).into(),
         issues,
         preview: make_preview(&content),
         updated_at,
@@ -292,6 +311,17 @@ fn build_skill(source: &SourceInput, root: &Path, skill_dir: &Path) -> io::Resul
         content_hash,
         related_files: collect_related_files(skill_dir, &skill_file_path)?,
     })
+}
+
+fn path_kind_for_skill_dir(skill_dir: &Path) -> &'static str {
+    if fs::symlink_metadata(skill_dir)
+        .map(|metadata| metadata.file_type().is_symlink())
+        .unwrap_or(false)
+    {
+        "symlink"
+    } else {
+        "directory"
+    }
 }
 
 fn validate_skill(content: &str, has_title: bool) -> Vec<ValidationIssue> {
@@ -334,7 +364,10 @@ fn extract_title(content: &str) -> Option<String> {
         .skip_while(|line| *line != "---")
         .skip(1)
         .take_while(|line| *line != "---")
-        .find_map(|line| line.strip_prefix("name:").map(|value| value.trim().to_string()))
+        .find_map(|line| {
+            line.strip_prefix("name:")
+                .map(|value| value.trim().to_string())
+        })
     {
         if !frontmatter_name.is_empty() {
             return Some(frontmatter_name);
@@ -386,7 +419,9 @@ fn points_to_directory(path: &Path) -> io::Result<bool> {
     }
 
     if file_type.is_symlink() {
-        return Ok(fs::metadata(path).map(|metadata| metadata.is_dir()).unwrap_or(false));
+        return Ok(fs::metadata(path)
+            .map(|metadata| metadata.is_dir())
+            .unwrap_or(false));
     }
 
     Ok(false)
@@ -467,7 +502,10 @@ mod tests {
 
     use crate::domain::{SourceInput, ToggleAppInstallRequest, ToolKind};
 
-    use super::{resolve_builtin_sources, scan_source, toggle_app_install_in_home};
+    use super::{
+        resolve_builtin_sources, scan_source, toggle_app_install_in_home,
+        toggle_app_installs_in_home,
+    };
 
     #[test]
     fn detects_skill_folder_when_skill_md_exists() {
@@ -540,12 +578,15 @@ mod tests {
         fs::write(source_skill.join("SKILL.md"), "# Error Resolver\n").unwrap();
         fs::write(source_skill.join("notes.txt"), "extra").unwrap();
 
-        toggle_app_install_in_home(&ToggleAppInstallRequest {
-            skill_id: "error-resolver".into(),
-            source_skill_path: source_skill.display().to_string(),
-            target_app: ToolKind::Claude,
-            enabled: true,
-        }, Some(temp.path()))
+        toggle_app_install_in_home(
+            &ToggleAppInstallRequest {
+                skill_id: "error-resolver".into(),
+                source_skill_path: source_skill.display().to_string(),
+                target_app: ToolKind::Claude,
+                enabled: true,
+            },
+            Some(temp.path()),
+        )
         .unwrap();
 
         let target_skill = temp.path().join(".claude/skills/error-resolver");
@@ -560,19 +601,61 @@ mod tests {
         fs::create_dir_all(&target_skill).unwrap();
         fs::write(target_skill.join("SKILL.md"), "# Error Resolver\n").unwrap();
 
-        toggle_app_install_in_home(&ToggleAppInstallRequest {
-            skill_id: "error-resolver".into(),
-            source_skill_path: temp
-                .path()
-                .join("library/error-resolver")
-                .display()
-                .to_string(),
-            target_app: ToolKind::Gemini,
-            enabled: false,
-        }, Some(temp.path()))
+        toggle_app_install_in_home(
+            &ToggleAppInstallRequest {
+                skill_id: "error-resolver".into(),
+                source_skill_path: temp
+                    .path()
+                    .join("library/error-resolver")
+                    .display()
+                    .to_string(),
+                target_app: ToolKind::Gemini,
+                enabled: false,
+            },
+            Some(temp.path()),
+        )
         .unwrap();
 
         assert!(!target_skill.exists());
+    }
+
+    #[test]
+    fn applies_batch_install_requests_in_one_call() {
+        let temp = tempdir().unwrap();
+        let error_resolver = temp.path().join("library").join("error-resolver");
+        let translator = temp.path().join("library").join("translator");
+        fs::create_dir_all(&error_resolver).unwrap();
+        fs::create_dir_all(&translator).unwrap();
+        fs::write(error_resolver.join("SKILL.md"), "# Error Resolver\n").unwrap();
+        fs::write(translator.join("SKILL.md"), "# Translator\n").unwrap();
+
+        toggle_app_installs_in_home(
+            &[
+                ToggleAppInstallRequest {
+                    skill_id: "error-resolver".into(),
+                    source_skill_path: error_resolver.display().to_string(),
+                    target_app: ToolKind::Claude,
+                    enabled: true,
+                },
+                ToggleAppInstallRequest {
+                    skill_id: "translator".into(),
+                    source_skill_path: translator.display().to_string(),
+                    target_app: ToolKind::Codex,
+                    enabled: true,
+                },
+            ],
+            Some(temp.path()),
+        )
+        .unwrap();
+
+        assert!(temp
+            .path()
+            .join(".claude/skills/error-resolver/SKILL.md")
+            .exists());
+        assert!(temp
+            .path()
+            .join(".codex/skills/translator/SKILL.md")
+            .exists());
     }
 
     #[cfg(unix)]

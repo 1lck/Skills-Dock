@@ -14,6 +14,13 @@ export type SourceStatus =
   | "unavailable";
 export type SkillStatus = "valid" | "warning" | "invalid";
 export type IssueSeverity = "warning" | "error";
+export type SkillPathKind = "directory" | "symlink";
+export type InstallationState =
+  | "ready"
+  | "attention"
+  | "conflict"
+  | "linked"
+  | "external";
 
 export interface ValidationIssue {
   code: string;
@@ -50,6 +57,7 @@ export interface SkillSummary {
   detectedFormat: string;
   compatibility: ToolKind | "unknown";
   status: SkillStatus;
+  pathKind: SkillPathKind;
   issues: ValidationIssue[];
   preview: string;
   updatedAt: string;
@@ -81,6 +89,7 @@ export interface AggregatedInstallation {
   skillPath: string;
   skillFilePath: string;
   status: SkillStatus;
+  pathKind: SkillPathKind;
   contentHash: string;
   updatedAt: string;
 }
@@ -90,6 +99,7 @@ export interface AggregatedInstalledSkill {
   canonicalId: string;
   name: string;
   status: SkillStatus;
+  installationState: InstallationState;
   preview: string;
   updatedAt: string;
   apps: InstalledAppState;

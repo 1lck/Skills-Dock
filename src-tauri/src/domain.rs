@@ -53,6 +53,7 @@ pub struct SkillDetail {
     pub detected_format: String,
     pub compatibility: String,
     pub status: String,
+    pub path_kind: String,
     pub issues: Vec<ValidationIssue>,
     pub preview: String,
     pub updated_at: String,
