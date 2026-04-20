@@ -35,6 +35,11 @@ fn scan_skill_usage() -> HashMap<String, usage::SkillCallRecord> {
     usage::scan_skill_usage()
 }
 
+#[tauri::command]
+fn get_installed_apps() -> HashMap<String, bool> {
+    scan::check_installed_apps()
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -48,7 +53,8 @@ pub fn run() {
             open_path,
             toggle_app_install,
             toggle_app_installs,
-            scan_skill_usage
+            scan_skill_usage,
+            get_installed_apps,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

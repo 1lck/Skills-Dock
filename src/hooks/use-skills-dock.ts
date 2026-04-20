@@ -66,6 +66,7 @@ export function useSkillsDock() {
   const [selectedToolKind, setSelectedToolKind] = useState<ToolKind | "all">("all");
   const [batchBusy, setBatchBusy] = useState(false);
   const [usageMap, setUsageMap] = useState<SkillUsageMap>({});
+  const [installedApps, setInstalledApps] = useState<Record<string, boolean>>({});
 
   async function refresh(customRootsOverride?: string[]) {
     setLoading(true);
@@ -79,8 +80,12 @@ export function useSkillsDock() {
       snapshot = await invoke<SkillSnapshot>("scan_sources", {
         sources: resolvedSources.map(toSourceInput),
       });
+      
+      const appsInstalled = await invoke<Record<string, boolean>>("get_installed_apps");
+      setInstalledApps(appsInstalled);
     } else {
       snapshot = buildDemoSnapshot(customRoots);
+      setInstalledApps({ codex: true, claude: true, gemini: true, opencode: true });
     }
 
     setSources(snapshot.sources);
@@ -284,6 +289,7 @@ export function useSkillsDock() {
     appCounts,
     batchBusy,
     usageMap,
+    installedApps,
     skills: filteredSkills,
     selectedSkill:
       filteredSkills.find((skill) => skill.id === selectedSkillId) ?? null,

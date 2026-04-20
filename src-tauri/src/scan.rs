@@ -190,6 +190,22 @@ fn toggle_app_installs_in_home(
     Ok(())
 }
 
+pub fn check_installed_apps() -> std::collections::HashMap<String, bool> {
+    let mut apps = std::collections::HashMap::new();
+    
+    let codex_root = Path::new(&expand_home("~/.codex", None)).exists();
+    let claude_root = Path::new(&expand_home("~/.claude", None)).exists();
+    let gemini_root = Path::new(&expand_home("~/.gemini", None)).exists();
+    let opencode_root = Path::new(&expand_home("~/.opencode", None)).exists();
+
+    apps.insert("codex".into(), codex_root);
+    apps.insert("claude".into(), claude_root);
+    apps.insert("gemini".into(), gemini_root);
+    apps.insert("opencode".into(), opencode_root);
+
+    apps
+}
+
 fn builtin_source(name: &str, tool_kind: ToolKind, path: &str) -> SourceRecord {
     let root_path = expand_home(path, None);
     let status = classify_source_root(Path::new(&root_path));

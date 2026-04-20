@@ -873,3 +873,13 @@ h1, h2, h3, h4, h5, h6, .chip, .summary-pill, strong, .badge {
 .skill-row:hover .call-count-badge[data-count]:not([data-count="0"]) {
   background: #dcfce7;
 }
+
+.app-pill.is-disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  filter: grayscale(100%);
+}
+.batch-toggle-group.is-disabled {
+  opacity: 0.3;
+  pointer-events: none;
+}

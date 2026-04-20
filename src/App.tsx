@@ -77,6 +77,7 @@ function App() {
       skills={skillsDock.skills}
       sources={skillsDock.sources}
       usageMap={skillsDock.usageMap}
+      installedApps={skillsDock.installedApps}
     />
   );
 }

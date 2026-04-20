@@ -24,6 +24,7 @@ interface AppShellProps {
   selectedToolKind: ToolKind | "all";
   batchBusy: boolean;
   usageMap: SkillUsageMap;
+  installedApps: Record<string, boolean>;
   onSearchChange: (value: string) => void;
   onRefresh: () => void;
   onAddFolder: () => void;
@@ -53,6 +54,7 @@ export function AppShell({
   selectedToolKind,
   batchBusy,
   usageMap,
+  installedApps,
   onSearchChange,
   onRefresh,
   onAddFolder,
@@ -215,6 +217,7 @@ export function AppShell({
           skills={skills}
           sources={sources}
           usageMap={usageMap}
+          installedApps={installedApps}
         />
       </div>
 
