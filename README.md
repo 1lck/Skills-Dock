@@ -1,71 +1,75 @@
 # Skills Dock
 
-Skills Dock is a desktop app for managing local AI skills across multiple coding tools.
+> 一个用于管理本地 AI Skills 的桌面应用，面向 Codex、Claude、Gemini、OpenCode 等多种编码工具。
 
-It is built with `Tauri + React + TypeScript + Rust`, and the current MVP focuses on local skill discovery and management on macOS. The app is designed so it can expand to Windows 11 later.
+## ✨ 项目简介
 
-## What it does today
+Skills Dock 是一个本地优先的桌面应用，用来统一查看、发现和管理散落在不同工具中的 AI Skills。
 
-The current build can:
+项目基于 `Tauri + React + TypeScript + Rust` 构建，当前 MVP 主要面向 macOS 的本地 Skill 扫描与安装管理，同时保留了后续扩展到 Windows 11 的空间。
 
-- scan local skill directories for Codex, Claude, Gemini, and OpenCode
-- support custom skill folders
-- show installed skills in a desktop-friendly list
-- aggregate one skill across multiple apps into a single row
-- show per-app install state for Claude, Codex, Gemini, and OpenCode
-- toggle app install state by copying or removing the skill directory in the target app
-- preview `SKILL.md`, validation status, installation locations, and content differences
+## ✅ 当前已经支持
 
-## What it does not do yet
+目前这个版本可以：
 
-The current MVP does not include:
+- 扫描 Codex、Claude、Gemini、OpenCode 的本地 Skill 目录
+- 支持添加自定义 Skill 文件夹
+- 以适合桌面应用的列表方式展示已安装 Skills
+- 将同一个 Skill 在多个应用中的安装状态聚合成一行
+- 展示 Claude、Codex、Gemini、OpenCode 各自的安装状态
+- 通过复制或删除目标目录中的 Skill 文件夹，切换单个应用的安装状态
+- 预览 `SKILL.md`、校验状态、安装位置以及内容差异
 
-- a remote skill marketplace
-- ZIP import flow
-- in-app skill editing
-- sync, accounts, or cloud storage
+## 🚧 暂未包含
 
-## Understand the two dev modes
+当前 MVP 还没有这些能力：
 
-There are two ways to run the project, and they are not equivalent.
+- 远程 Skill 市场
+- ZIP 导入流程
+- 应用内直接编辑 Skill
+- 同步、账号体系或云存储
 
-### Use the browser preview for UI work
+## 🧪 两种开发模式
 
-Run:
+这个项目有两种运行方式，它们的用途并不相同。
+
+### 1. 浏览器预览模式
+
+运行：
 
 ```bash
 npm run dev
 ```
 
-This is useful for:
+适合用于：
 
-- layout
-- styling
-- component interaction
+- 布局调试
+- 样式调整
+- 组件交互开发
 
-It uses demo data. It does **not** scan your real machine.
+这个模式使用的是演示数据，**不会**扫描你本机的真实 Skill 目录。
 
-### Use the desktop app for real behavior
+### 2. 桌面应用模式
 
-Run:
+运行：
 
 ```bash
 npm run tauri dev
 ```
 
-Use this when you want to verify:
+当你需要验证下面这些真实行为时，应使用这个模式：
 
-- local directory scanning
-- symlinked skill directories
-- open file and open folder actions
-- per-app install toggles
-- real counts from your machine
+- 本地目录扫描
+- 软链接 Skill 目录
+- 打开文件、打开文件夹操作
+- 各应用的安装开关
+- 来自本机环境的真实统计结果
 
-If you only use `npm run dev`, the app will show a banner explaining that it is using demo data.
+如果你只运行 `npm run dev`，应用会显示提示横幅，说明当前使用的是演示数据。
 
-## Local directories the app knows about
+## 📁 内置识别的本地目录
 
-The desktop app currently resolves these built-in locations:
+桌面应用当前会自动识别这些内置路径：
 
 - `~/.codex/skills`
 - `~/.codex/superpowers/skills`
@@ -73,116 +77,114 @@ The desktop app currently resolves these built-in locations:
 - `~/.gemini/skills`
 - `~/.opencode/skills`
 
-It also supports custom local folders that you add from the UI.
+此外，你也可以在 UI 中手动添加自定义本地目录。
 
-## Prerequisites
+## 🛠 环境要求
 
-You need:
+开始前请准备：
 
 - Node.js
 - npm
 - Rust
 - Cargo
-- Xcode or Xcode Command Line Tools on macOS
+- macOS 上的 Xcode 或 Xcode Command Line Tools
 
-If `xcode-select -p` returns a valid Xcode path, your macOS toolchain is set up correctly for Tauri development.
+如果 `xcode-select -p` 能返回有效的 Xcode 路径，通常说明当前 macOS 环境已经满足 Tauri 开发要求。
 
-## Install dependencies
-
-Run:
+## 📦 安装依赖
 
 ```bash
 npm install
 ```
 
-## Common commands
+## 🚀 常用命令
 
-Run the browser dev server:
+启动浏览器开发环境：
 
 ```bash
 npm run dev
 ```
 
-Run the desktop app:
+启动桌面应用：
 
 ```bash
 npm run tauri dev
 ```
 
-Run tests:
+运行前端测试：
 
 ```bash
 npm run test
 ```
 
-Build the frontend bundle:
+构建前端产物：
 
 ```bash
 npm run build
 ```
 
-Check the Rust side:
+检查 Rust 侧编译状态：
 
 ```bash
 cargo check --manifest-path src-tauri/Cargo.toml
 ```
 
-Run Rust tests:
+运行 Rust 测试：
 
 ```bash
 cargo test --manifest-path src-tauri/Cargo.toml
 ```
 
-## Project structure
+## 🧱 项目结构
 
-The important parts of the repo are:
+仓库中比较重要的目录包括：
 
 - `src/`
-  The React app, including layout, list views, detail views, and hooks
+  React 前端应用，包含布局、列表页、详情页以及相关 hooks
 - `src-tauri/`
-  The Rust command layer for scanning, validation, file operations, and app install toggles
+  Rust 命令层，负责扫描、校验、文件操作和各应用安装切换
 - `docs/superpowers/specs/`
-  Design notes for the MVP
+  MVP 设计说明
 - `docs/superpowers/plans/`
-  Implementation plan used to build the current version
+  当前版本的实现计划
 
-## Current UI model
+## 🖥 当前界面模型
 
-The app currently uses a three-panel layout:
+应用目前采用三栏布局：
 
 - **Sources**
-  Built-in and custom skill roots
+  内置与自定义 Skill 根目录
 - **Installed Skills**
-  One row per skill, aggregated across apps
+  以 Skill 为单位聚合后的安装列表
 - **Skill Detail**
-  Installation locations, validation results, and `SKILL.md` preview
+  安装位置、校验结果与 `SKILL.md` 预览
 
-The installed skills list is intentionally compact. It shows the skill title, validation state, and app-level install status without repeating the full description in every row.
+已安装 Skills 列表刻意保持紧凑。它会展示 Skill 标题、校验状态和各应用安装情况，而不会在每一行重复完整描述。
 
-## Current scan behavior
+## 🔍 当前扫描逻辑
 
-The Rust scanner:
+Rust 扫描器目前会：
 
-- detects directories that contain `SKILL.md`
-- follows symlinked skill directories
-- extracts a name from frontmatter or markdown headings
-- computes validation status
-- hashes content so installation differences can be compared
+- 识别包含 `SKILL.md` 的目录
+- 跟随符号链接的 Skill 目录继续扫描
+- 从 frontmatter 或 Markdown 标题中提取名称
+- 计算校验状态
+- 对内容做哈希，以便比较安装差异
 
-This matters for tools like Claude Code, where installed skills may be symlinked from another location such as `~/.cc-switch/skills`.
+这对 Claude Code 一类工具尤其重要，因为它们的 Skills 目录有时会通过软链接指向其他位置，例如 `~/.cc-switch/skills`。
 
-## Current status
+## 📌 当前状态
 
-The project already has:
+这个项目已经具备：
 
-- a working desktop scaffold
-- tested scan and aggregation logic
-- tested app install toggling logic
-- GitHub repo initialization on `main`
+- 可运行的桌面应用基础骨架
+- 已有测试覆盖的扫描与聚合逻辑
+- 已有测试覆盖的应用安装切换逻辑
+- 基于 `main` 分支初始化完成的 GitHub 仓库
 
-The next likely steps are:
+下一步比较自然的演进方向包括：
 
-- ZIP import
-- “import existing” flow
-- clearer source grouping and counting rules
-- better settings for `copy` vs. `symlink` install strategy
+- ZIP 导入
+- “导入已有 Skills” 流程
+- 更清晰的来源分组与计数规则
+- 针对 `copy` / `symlink` 安装策略提供更完善的设置项
