@@ -48,7 +48,7 @@ const appCounts = {
 };
 
 describe("AppShell", () => {
-  test("renders source, skills, and detail regions", () => {
+  test("renders skills region and no detail when no skill selected", () => {
     render(
       <AppShell
         loading={false}
@@ -76,11 +76,13 @@ describe("AppShell", () => {
         onBatchApply={vi.fn()}
         onOpenPath={vi.fn()}
         onToggleApp={vi.fn()}
+        usageMap={{}}
       />,
     );
 
     expect(screen.getByRole("region", { name: "Skills" })).toBeVisible();
-    expect(screen.getByRole("region", { name: "Skill Detail" })).toBeVisible();
+    // Detail panel is now a modal — it should not exist when no skill is selected
+    expect(screen.queryByRole("region", { name: "Skill Detail" })).toBeNull();
   });
 
   test("applies selected filters to the visible list", () => {
@@ -111,6 +113,7 @@ describe("AppShell", () => {
         onBatchApply={vi.fn()}
         onOpenPath={vi.fn()}
         onToggleApp={vi.fn()}
+        usageMap={{}}
       />,
     );
 
@@ -158,10 +161,12 @@ describe("AppShell", () => {
         onBatchApply={vi.fn()}
         onOpenPath={vi.fn()}
         onToggleApp={vi.fn()}
+        usageMap={{}}
       />,
     );
 
-    expect(screen.getByText("Select a skill to inspect its files and validation status.")).toBeVisible();
+    // Detail is now a modal — no modal rendered means no empty state text visible
+    expect(screen.queryByText("Select a skill to inspect its files and validation status.")).toBeNull();
   });
 
   test("shows a demo mode banner when previewing mock data", () => {
@@ -192,11 +197,12 @@ describe("AppShell", () => {
         onBatchApply={vi.fn()}
         onOpenPath={vi.fn()}
         onToggleApp={vi.fn()}
+        usageMap={{}}
       />,
     );
 
     expect(
-      screen.getByText("当前是浏览器预览模式，列表使用演示数据。请运行桌面端以扫描本机 skills。"),
+      screen.getByText(/演示模式/),
     ).toBeVisible();
   });
 
@@ -230,6 +236,7 @@ describe("AppShell", () => {
         onBatchApply={vi.fn()}
         onOpenPath={vi.fn()}
         onToggleApp={onToggleApp}
+        usageMap={{}}
       />,
     );
 
@@ -268,6 +275,7 @@ describe("AppShell", () => {
         onBatchApply={vi.fn()}
         onOpenPath={vi.fn()}
         onToggleApp={vi.fn()}
+        usageMap={{}}
       />,
     );
 
@@ -304,6 +312,7 @@ describe("AppShell", () => {
         onBatchApply={vi.fn()}
         onOpenPath={vi.fn()}
         onToggleApp={vi.fn()}
+        usageMap={{}}
       />,
     );
 
@@ -343,6 +352,7 @@ describe("AppShell", () => {
         onBatchApply={vi.fn()}
         onOpenPath={vi.fn()}
         onToggleApp={vi.fn()}
+        usageMap={{}}
       />,
     );
 

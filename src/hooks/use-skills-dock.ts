@@ -22,6 +22,7 @@ import {
   saveCustomSources,
   type StorageLike,
 } from "../lib/storage/custom-sources";
+import type { SkillUsageMap } from "../lib/storage/skill-usage";
 
 function isTauriRuntime(): boolean {
   return isTauri();
@@ -64,6 +65,7 @@ export function useSkillsDock() {
     useState<InstallationState | "all">("all");
   const [selectedToolKind, setSelectedToolKind] = useState<ToolKind | "all">("all");
   const [batchBusy, setBatchBusy] = useState(false);
+  const [usageMap, setUsageMap] = useState<SkillUsageMap>({});
 
   async function refresh(customRootsOverride?: string[]) {
     setLoading(true);
@@ -83,6 +85,13 @@ export function useSkillsDock() {
 
     setSources(snapshot.sources);
     setAllSkills(snapshot.skills);
+
+    // 扫描 Claude / Codex 日志，获取真实调用次数
+    if (!demoMode) {
+      const scanned = await invoke<SkillUsageMap>("scan_skill_usage");
+      setUsageMap(scanned);
+    }
+
     setLoading(false);
   }
 
@@ -175,6 +184,7 @@ export function useSkillsDock() {
     await invoke("open_path", { path });
   }
 
+
   async function toggleApp(skillId: string, app: AppKind, enabled: boolean) {
     const aggregated = aggregateInstalledSkills(allSkills);
     const skill = aggregated.find((entry) => entry.canonicalId === skillId);
@@ -189,14 +199,8 @@ export function useSkillsDock() {
     if (demoMode) {
       setAllSkills((current) =>
         current.map((s) => {
-          if (s.canonicalId === skillId) {
-            return {
-              ...s,
-              apps: {
-                ...s.apps,
-                [app]: enabled,
-              },
-            };
+          if (s.id === skillId || s.sourcePath === sourcePath) {
+            return { ...s };
           }
           return s;
         }),
@@ -279,6 +283,7 @@ export function useSkillsDock() {
     sources,
     appCounts,
     batchBusy,
+    usageMap,
     skills: filteredSkills,
     selectedSkill:
       filteredSkills.find((skill) => skill.id === selectedSkillId) ?? null,

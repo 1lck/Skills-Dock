@@ -1,7 +1,9 @@
 mod domain;
 mod scan;
+mod usage;
 
 use domain::{SkillSnapshot, SourceInput, SourceRecord, ToggleAppInstallRequest};
+use std::collections::HashMap;
 
 #[tauri::command]
 fn load_sources(custom_roots: Vec<String>) -> Vec<SourceRecord> {
@@ -28,6 +30,11 @@ fn toggle_app_installs(requests: Vec<ToggleAppInstallRequest>) -> Result<(), Str
     scan::toggle_app_installs(&requests).map_err(|error| error.to_string())
 }
 
+#[tauri::command]
+fn scan_skill_usage() -> HashMap<String, usage::SkillCallRecord> {
+    usage::scan_skill_usage()
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -38,7 +45,8 @@ pub fn run() {
             scan_sources,
             open_path,
             toggle_app_install,
-            toggle_app_installs
+            toggle_app_installs,
+            scan_skill_usage
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

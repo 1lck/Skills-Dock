@@ -34,6 +34,7 @@ function App() {
       selectedSkillIds={skillsDock.selectedSkillIds}
       skills={skillsDock.skills}
       sources={skillsDock.sources}
+      usageMap={skillsDock.usageMap}
     />
   );
 }

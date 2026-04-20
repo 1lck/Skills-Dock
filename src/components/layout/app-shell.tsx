@@ -1,5 +1,4 @@
 import { useState } from "react";
-
 import type {
   AggregatedInstalledSkill,
   AppKind,
@@ -7,6 +6,7 @@ import type {
   SourceRecord,
   ToolKind,
 } from "../../lib/models/skill";
+import type { SkillUsageMap } from "../../lib/storage/skill-usage";
 import { SkillDetailPanel } from "../detail/skill-detail";
 import { SkillsList } from "../skills/skills-list";
 
@@ -23,6 +23,7 @@ interface AppShellProps {
   selectedInstallationState: InstallationState | "all";
   selectedToolKind: ToolKind | "all";
   batchBusy: boolean;
+  usageMap: SkillUsageMap;
   onSearchChange: (value: string) => void;
   onRefresh: () => void;
   onAddFolder: () => void;
@@ -51,6 +52,7 @@ export function AppShell({
   selectedInstallationState,
   selectedToolKind,
   batchBusy,
+  usageMap,
   onSearchChange,
   onRefresh,
   onAddFolder,
@@ -212,6 +214,7 @@ export function AppShell({
           selectedSkillIds={selectedSkillIds}
           skills={skills}
           sources={sources}
+          usageMap={usageMap}
         />
       </div>
 
@@ -221,9 +224,16 @@ export function AppShell({
             <button aria-label="关闭" className="modal-close-btn" onClick={() => onSelectSkill(null)} type="button">
               ×
             </button>
-            <SkillDetailPanel onOpenPath={onOpenPath} skill={selectedSkill} />
+            <SkillDetailPanel
+              onOpenPath={onOpenPath}
+              skill={selectedSkill}
+            />
           </div>
         </div>
+      ) : null}
+
+      {isDemoMode ? (
+        <div className="demo-banner">⚠️ 演示模式 · 当前显示的是模拟数据，非本机真实 Skill 目录</div>
       ) : null}
     </main>
   );

@@ -3,6 +3,7 @@ import type {
   AppKind,
   SourceRecord,
 } from "../../lib/models/skill";
+import type { SkillUsageMap } from "../../lib/storage/skill-usage";
 
 interface SkillsListProps {
   skills: AggregatedInstalledSkill[];
@@ -11,6 +12,7 @@ interface SkillsListProps {
   selectedSkillId: string | null;
   selectedSkillIds: string[];
   batchBusy: boolean;
+  usageMap?: SkillUsageMap;
   onSelectSkill: (skillId: string) => void;
   onToggleSkillSelection: (skillId: string) => void;
   onToggleSelectAllVisible: () => void;
@@ -24,18 +26,10 @@ export function SkillsList({
   sources,
   loading,
   selectedSkillId,
-  selectedSkillIds,
-  batchBusy,
+  usageMap = {},
   onSelectSkill,
-  onToggleSkillSelection,
-  onToggleSelectAllVisible,
-  onClearSelection,
-  onBatchApply,
   onToggleApp,
 }: SkillsListProps) {
-  const selectedCount = selectedSkillIds.length;
-  const allVisibleSelected =
-    skills.length > 0 && skills.every((skill) => selectedSkillIds.includes(skill.id));
 
   return (
     <section aria-label="Skills" className="skills-panel">
@@ -71,6 +65,17 @@ export function SkillsList({
               <span className={`badge status is-${skill.installationState}`}>
                 {labelForInstallationState(skill.installationState)}
               </span>
+              <span
+                className="call-count-badge"
+                data-count={usageMap[skill.canonicalId]?.callCount ?? 0}
+                title="Agent 调用次数"
+              >
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+                  <circle cx="5" cy="5" r="4.5" stroke="currentColor" strokeWidth="1"/>
+                  <path d="M3.5 5 L4.5 6 L6.5 4" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                {usageMap[skill.canonicalId]?.callCount ?? 0}
+              </span>
               <AppStatusRail skill={skill} sources={sources} onToggleApp={onToggleApp} />
             </div>
           </div>
@@ -80,12 +85,6 @@ export function SkillsList({
   );
 }
 
-const APP_LIST = [
-  { key: "claude", label: "Claude" },
-  { key: "codex", label: "Codex" },
-  { key: "gemini", label: "Gemini" },
-  { key: "opencode", label: "OpenCode" },
-] satisfies Array<{ key: AppKind; label: string }>;
 
 function AppStatusRail({
   skill,

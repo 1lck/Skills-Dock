@@ -843,3 +843,33 @@ h1, h2, h3, h4, h5, h6, .chip, .summary-pill, strong, .badge {
   gap: 6px;
   color: var(--text-muted);
 }
+
+/* 默认（0次）：灰色低调 */
+.call-count-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  background: #f3f4f6;
+  color: #9ca3af;
+  border: 1px solid #e5e7eb;
+  font-family: "Plus Jakarta Sans", sans-serif;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+  cursor: default;
+}
+
+/* 有调用次数：绿色醒目 */
+.call-count-badge[data-count]:not([data-count="0"]) {
+  background: #f0fdf4;
+  color: #16a34a;
+  border-color: #bbf7d0;
+  font-weight: 700;
+}
+
+.skill-row:hover .call-count-badge[data-count]:not([data-count="0"]) {
+  background: #dcfce7;
+}

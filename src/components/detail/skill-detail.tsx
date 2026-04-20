@@ -79,7 +79,10 @@ export function SkillDetailPanel({ skill, onOpenPath }: SkillDetailProps) {
 
           <div className="app-store-footer">
             <button className="btn-uninstall" type="button">卸载</button>
-            <button className="btn-try-chat" type="button">
+            <button
+              className="btn-try-chat"
+              type="button"
+            >
               <MessageCircle size={16} strokeWidth={2.5} /> 在聊天中试用
             </button>
           </div>
@@ -97,23 +100,7 @@ function compareWithPrimary(primaryHash: string, nextHash: string): string {
   if (!primaryHash) {
     return "primary";
   }
-
   return primaryHash === nextHash ? "same content" : "different content";
-}
-
-function labelForInstallationState(state: AggregatedInstalledSkill["installationState"]): string {
-  switch (state) {
-    case "ready":
-      return "安装正常";
-    case "attention":
-      return "需要处理";
-    case "conflict":
-      return "内容冲突";
-    case "linked":
-      return "符号链接";
-    case "external":
-      return "外部来源";
-  }
 }
 
 function labelForValidation(status: AggregatedInstalledSkill["status"]): string {
