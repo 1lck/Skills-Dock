@@ -26,6 +26,7 @@ serde_json = "1"
 sha2 = "0.10"
 time = { version = "0.3", features = ["formatting"] }
 walkdir = "2"
+tauri-plugin-updater = "2.10.1"
 
 [dev-dependencies]
 tempfile = "3"
