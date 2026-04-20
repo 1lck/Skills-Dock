@@ -240,8 +240,10 @@ fn parse_codex_jsonl(path: &Path, invocations: &mut HashMap<String, Vec<String>>
 /// 例：`sed -n '1,220p' /Users/lick/.codex/skills/find-skills/SKILL.md`
 ///   → "find-skills"
 fn extract_skill_name_from_cmd(cmd: &str) -> Option<String> {
-    let pos = cmd.find("/SKILL.md")?;
-    let before = &cmd[..pos];
+    // 兼容 Windows 系统的反斜杠 \SKILL.md 和 /SKILL.md
+    let normalized_cmd = cmd.replace('\\', "/");
+    let pos = normalized_cmd.find("/SKILL.md")?;
+    let before = &normalized_cmd[..pos];
     let name = before.split('/').last()?;
     if name.is_empty() || name.starts_with('.') {
         return None;
