@@ -22,11 +22,12 @@
 html,
 body,
 #root {
-  min-height: 100%;
+  height: 100%;
 }
 
 body {
   margin: 0;
+  overflow: hidden;
 }
 
 button,
@@ -57,11 +58,12 @@ button:disabled {
 }
 
 .app-shell {
-  min-height: 100vh;
+  height: 100vh;
   padding: 32px;
   display: flex;
   flex-direction: column;
   gap: 20px;
+  overflow: hidden;
 }
 
 .hero-bar,
@@ -250,14 +252,17 @@ button:disabled {
   display: grid;
   grid-template-columns: minmax(480px, 1fr) minmax(360px, 0.92fr);
   gap: 18px;
+  overflow: hidden;
 }
 
 .skills-panel,
 .detail-panel {
   border-radius: 30px;
   padding: 22px;
+  min-height: 0;
 }
 
+.skills-panel,
 .detail-panel {
   display: flex;
   flex-direction: column;
@@ -337,9 +342,6 @@ button:disabled {
   flex-direction: column;
   gap: 12px;
   min-height: 0;
-}
-
-.skills-list {
   overflow: auto;
   padding-right: 4px;
 }
@@ -522,16 +524,6 @@ button:disabled {
   gap: 4px;
 }
 
-.markdown-preview {
-  margin: 0;
-  white-space: pre-wrap;
-  font-family:
-    "SF Mono",
-    "JetBrains Mono",
-    monospace;
-  line-height: 1.55;
-}
-
 .empty-state {
   color: #7b7686;
   padding: 10px 2px;
@@ -542,8 +534,27 @@ button:disabled {
 }
 
 @media (max-width: 1180px) {
+  body {
+    overflow: auto;
+  }
+
+  .app-shell {
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+  }
+
   .workspace-grid {
     grid-template-columns: 1fr;
+    overflow: visible;
+  }
+
+  .skills-panel,
+  .detail-panel,
+  .skills-list,
+  .detail-stack {
+    min-height: auto;
+    overflow: visible;
   }
 }
 
