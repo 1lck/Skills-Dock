@@ -1,4 +1,3 @@
-import { countInstalledApps } from "../../lib/application/skills-catalog";
 import type {
   AggregatedInstalledSkill,
   AppKind,
@@ -8,22 +7,20 @@ import type {
 } from "../../lib/models/skill";
 import { SkillDetailPanel } from "../detail/skill-detail";
 import { SkillsList } from "../skills/skills-list";
-import { SourceList } from "../sources/source-list";
 
 interface AppShellProps {
   loading: boolean;
   isDemoMode: boolean;
   sources: SourceRecord[];
+  appCounts: Record<AppKind, number>;
   skills: AggregatedInstalledSkill[];
   selectedSkill: AggregatedInstalledSkill | null;
   search: string;
-  selectedSourceId: string | "all";
   selectedStatus: SkillStatus | "all";
   selectedToolKind: ToolKind | "all";
   onSearchChange: (value: string) => void;
   onRefresh: () => void;
   onAddFolder: () => void;
-  onSelectSource: (sourceId: string | "all") => void;
   onSelectStatus: (status: SkillStatus | "all") => void;
   onSelectToolKind: (toolKind: ToolKind | "all") => void;
   onSelectSkill: (skillId: string) => void;
@@ -35,23 +32,27 @@ export function AppShell({
   loading,
   isDemoMode,
   sources,
+  appCounts,
   skills,
   selectedSkill,
   search,
-  selectedSourceId,
   selectedStatus,
   selectedToolKind,
   onSearchChange,
   onRefresh,
   onAddFolder,
-  onSelectSource,
   onSelectStatus,
   onSelectToolKind,
   onSelectSkill,
   onOpenPath,
   onToggleApp,
 }: AppShellProps) {
-  const toolCounts = countInstalledApps(skills);
+  const appFilters: Array<{ key: AppKind; label: string; count: number; className: string }> = [
+    { key: "claude", label: "Claude", count: appCounts.claude, className: "is-claude" },
+    { key: "codex", label: "Codex", count: appCounts.codex, className: "is-codex" },
+    { key: "gemini", label: "Gemini", count: appCounts.gemini, className: "is-gemini" },
+    { key: "opencode", label: "OpenCode", count: appCounts.opencode, className: "is-opencode" },
+  ];
 
   return (
     <main className="app-shell">
@@ -90,10 +91,23 @@ export function AppShell({
           </label>
         </div>
         <div className="summary-pills">
-          <span className="summary-pill is-claude">Claude: {toolCounts.claude}</span>
-          <span className="summary-pill is-codex">Codex: {toolCounts.codex}</span>
-          <span className="summary-pill is-gemini">Gemini: {toolCounts.gemini}</span>
-          <span className="summary-pill is-opencode">OpenCode: {toolCounts.opencode}</span>
+          {appFilters.map((app) => (
+            <button
+              key={app.key}
+              aria-label={`按 ${app.label} 筛选`}
+              className={
+                selectedToolKind === app.key
+                  ? `summary-pill ${app.className} is-active`
+                  : `summary-pill ${app.className}`
+              }
+              onClick={() =>
+                onSelectToolKind(selectedToolKind === app.key ? "all" : app.key)
+              }
+              type="button"
+            >
+              {app.label}: {app.count}
+            </button>
+          ))}
         </div>
       </section>
 
@@ -104,17 +118,6 @@ export function AppShell({
       ) : null}
 
       <section className="filters-row">
-        <select
-          onChange={(event) => onSelectToolKind(event.currentTarget.value as ToolKind | "all")}
-          value={selectedToolKind}
-        >
-          <option value="all">全部工具</option>
-          <option value="codex">Codex</option>
-          <option value="claude">Claude</option>
-          <option value="generic">Generic</option>
-          <option value="gemini">Gemini</option>
-          <option value="opencode">OpenCode</option>
-        </select>
         <select
           onChange={(event) => onSelectStatus(event.currentTarget.value as SkillStatus | "all")}
           value={selectedStatus}
@@ -127,11 +130,6 @@ export function AppShell({
       </section>
 
       <div className="workspace-grid">
-        <SourceList
-          onSelectSource={onSelectSource}
-          selectedSourceId={selectedSourceId}
-          sources={sources}
-        />
         <SkillsList
           loading={loading}
           onSelectSkill={onSelectSkill}

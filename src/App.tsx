@@ -14,15 +14,14 @@ function App() {
       onRefresh={() => void skillsDock.refresh()}
       onSearchChange={skillsDock.setSearch}
       onSelectSkill={skillsDock.setSelectedSkillId}
-      onSelectSource={skillsDock.setSelectedSourceId}
       onSelectStatus={skillsDock.setSelectedStatus}
       onSelectToolKind={skillsDock.setSelectedToolKind}
       onToggleApp={(skillId, app, enabled) =>
         void skillsDock.toggleApp(skillId, app, enabled)
       }
+      appCounts={skillsDock.appCounts}
       search={skillsDock.search}
       selectedSkill={skillsDock.selectedSkill}
-      selectedSourceId={skillsDock.selectedSourceId}
       selectedStatus={skillsDock.selectedStatus}
       selectedToolKind={skillsDock.selectedToolKind}
       skills={skillsDock.skills}

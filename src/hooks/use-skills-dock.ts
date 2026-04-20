@@ -2,7 +2,10 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import { useEffect, useState } from "react";
 
-import { aggregateInstalledSkills } from "../lib/application/skills-catalog";
+import {
+  aggregateInstalledSkills,
+  countInstalledApps,
+} from "../lib/application/skills-catalog";
 import { buildDemoSnapshot } from "../lib/fixtures/demo-snapshot";
 import type {
   AppKind,
@@ -84,7 +87,10 @@ export function useSkillsDock() {
     void refresh();
   }, []);
 
-  const filteredSkills = aggregateInstalledSkills(allSkills).filter((skill) => {
+  const aggregatedSkills = aggregateInstalledSkills(allSkills);
+  const appCounts = countInstalledApps(aggregatedSkills);
+
+  const filteredSkills = aggregatedSkills.filter((skill) => {
     if (selectedStatus !== "all" && skill.status !== selectedStatus) {
       return false;
     }
@@ -180,6 +186,7 @@ export function useSkillsDock() {
     loading,
     isDemoMode: demoMode,
     sources,
+    appCounts,
     skills: filteredSkills,
     selectedSkill:
       filteredSkills.find((skill) => skill.id === selectedSkillId) ?? null,

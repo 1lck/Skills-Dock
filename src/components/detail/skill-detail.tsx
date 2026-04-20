@@ -11,7 +11,7 @@ export function SkillDetailPanel({ skill, onOpenPath }: SkillDetailProps) {
       <div className="section-heading">
         <div>
           <h2>技能详情</h2>
-          <p className="panel-subtitle">查看路径、校验状态与 `SKILL.md` 内容。</p>
+          <p className="panel-subtitle">查看安装位置、校验状态与差异信息。</p>
         </div>
       </div>
 
@@ -76,11 +76,6 @@ export function SkillDetailPanel({ skill, onOpenPath }: SkillDetailProps) {
                 ))}
               </ul>
             )}
-          </div>
-
-          <div className="detail-card">
-            <p className="muted-label">SKILL.md</p>
-            <pre className="markdown-preview">{skill.primaryInstallation?.content ?? ""}</pre>
           </div>
         </div>
       )}

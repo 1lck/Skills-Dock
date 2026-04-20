@@ -39,6 +39,12 @@ const rawSkills: SkillDetail[] = [
 ];
 
 const skills = aggregateInstalledSkills(rawSkills);
+const appCounts = {
+  claude: 0,
+  codex: 1,
+  gemini: 0,
+  opencode: 0,
+};
 
 describe("AppShell", () => {
   test("renders source, skills, and detail regions", () => {
@@ -47,16 +53,15 @@ describe("AppShell", () => {
         loading={false}
         isDemoMode={false}
         sources={sources}
+        appCounts={appCounts}
         skills={skills}
         selectedSkill={null}
         search=""
-        selectedSourceId="all"
         selectedStatus="all"
         selectedToolKind="all"
         onSearchChange={vi.fn()}
         onRefresh={vi.fn()}
         onAddFolder={vi.fn()}
-        onSelectSource={vi.fn()}
         onSelectStatus={vi.fn()}
         onSelectToolKind={vi.fn()}
         onSelectSkill={vi.fn()}
@@ -65,7 +70,6 @@ describe("AppShell", () => {
       />,
     );
 
-    expect(screen.getByRole("complementary", { name: "Sources" })).toBeVisible();
     expect(screen.getByRole("region", { name: "Skills" })).toBeVisible();
     expect(screen.getByRole("region", { name: "Skill Detail" })).toBeVisible();
   });
@@ -76,16 +80,15 @@ describe("AppShell", () => {
         loading={false}
         isDemoMode={false}
         sources={sources}
+        appCounts={appCounts}
         skills={skills}
         selectedSkill={skills[0]}
         search=""
-        selectedSourceId="all"
         selectedStatus="all"
         selectedToolKind="all"
         onSearchChange={vi.fn()}
         onRefresh={vi.fn()}
         onAddFolder={vi.fn()}
-        onSelectSource={vi.fn()}
         onSelectStatus={vi.fn()}
         onSelectToolKind={vi.fn()}
         onSelectSkill={vi.fn()}
@@ -116,16 +119,15 @@ describe("AppShell", () => {
         loading={false}
         isDemoMode={false}
         sources={sources}
+        appCounts={appCounts}
         skills={skills}
         selectedSkill={null}
         search=""
-        selectedSourceId="all"
         selectedStatus="all"
         selectedToolKind="all"
         onSearchChange={vi.fn()}
         onRefresh={vi.fn()}
         onAddFolder={vi.fn()}
-        onSelectSource={vi.fn()}
         onSelectStatus={vi.fn()}
         onSelectToolKind={vi.fn()}
         onSelectSkill={vi.fn()}
@@ -143,16 +145,15 @@ describe("AppShell", () => {
         loading={false}
         isDemoMode
         sources={sources}
+        appCounts={appCounts}
         skills={skills}
         selectedSkill={skills[0]}
         search=""
-        selectedSourceId="all"
         selectedStatus="all"
         selectedToolKind="all"
         onSearchChange={vi.fn()}
         onRefresh={vi.fn()}
         onAddFolder={vi.fn()}
-        onSelectSource={vi.fn()}
         onSelectStatus={vi.fn()}
         onSelectToolKind={vi.fn()}
         onSelectSkill={vi.fn()}
@@ -174,16 +175,15 @@ describe("AppShell", () => {
         loading={false}
         isDemoMode={false}
         sources={sources}
+        appCounts={appCounts}
         skills={skills}
         selectedSkill={skills[0]}
         search=""
-        selectedSourceId="all"
         selectedStatus="all"
         selectedToolKind="all"
         onSearchChange={vi.fn()}
         onRefresh={vi.fn()}
         onAddFolder={vi.fn()}
-        onSelectSource={vi.fn()}
         onSelectStatus={vi.fn()}
         onSelectToolKind={vi.fn()}
         onSelectSkill={vi.fn()}
@@ -195,5 +195,64 @@ describe("AppShell", () => {
     fireEvent.click(screen.getByRole("button", { name: "切换 Claude 安装状态" }));
 
     expect(onToggleApp).toHaveBeenCalledWith("frontend-skill", "claude", true);
+  });
+
+  test("filters skills when clicking a top app summary chip", () => {
+    const onSelectToolKind = vi.fn();
+
+    render(
+      <AppShell
+        loading={false}
+        isDemoMode={false}
+        sources={sources}
+        appCounts={appCounts}
+        skills={skills}
+        selectedSkill={skills[0]}
+        search=""
+        selectedStatus="all"
+        selectedToolKind="all"
+        onSearchChange={vi.fn()}
+        onRefresh={vi.fn()}
+        onAddFolder={vi.fn()}
+        onSelectStatus={vi.fn()}
+        onSelectToolKind={onSelectToolKind}
+        onSelectSkill={vi.fn()}
+        onOpenPath={vi.fn()}
+        onToggleApp={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "按 Claude 筛选" }));
+
+    expect(onSelectToolKind).toHaveBeenCalledWith("claude");
+  });
+
+  test("keeps top app counts independent from the filtered list count", () => {
+    render(
+      <AppShell
+        loading={false}
+        isDemoMode={false}
+        sources={sources}
+        appCounts={{ claude: 11, codex: 26, gemini: 0, opencode: 0 }}
+        skills={skills}
+        selectedSkill={skills[0]}
+        search=""
+        selectedStatus="all"
+        selectedToolKind="codex"
+        onSearchChange={vi.fn()}
+        onRefresh={vi.fn()}
+        onAddFolder={vi.fn()}
+        onSelectStatus={vi.fn()}
+        onSelectToolKind={vi.fn()}
+        onSelectSkill={vi.fn()}
+        onOpenPath={vi.fn()}
+        onToggleApp={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "按 Codex 筛选" })).toHaveTextContent(
+      "Codex: 26",
+    );
+    expect(screen.getByText("1")).toBeVisible();
   });
 });
