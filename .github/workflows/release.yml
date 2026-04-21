@@ -55,11 +55,26 @@ jobs:
       - name: Install app dependencies
         run: npm install
 
+      - name: Prepare updater signing key (macOS/Linux)
+        if: runner.os != 'Windows'
+        run: |
+          printf '%s' "${{ secrets.TAURI_PRIVATE_KEY }}" > "$RUNNER_TEMP/tauri.key"
+          echo "TAURI_SIGNING_PRIVATE_KEY_PATH=$RUNNER_TEMP/tauri.key" >> "$GITHUB_ENV"
+
+      - name: Prepare updater signing key (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $keyPath = Join-Path $env:RUNNER_TEMP "tauri.key"
+          [System.IO.File]::WriteAllText($keyPath, @'
+${{ secrets.TAURI_PRIVATE_KEY }}
+'@)
+          "TAURI_SIGNING_PRIVATE_KEY_PATH=$keyPath" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
       # Tauri 官方打包 action
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
         with:
           tagName: ${{ github.ref_name }}
