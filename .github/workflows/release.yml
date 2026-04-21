@@ -64,11 +64,11 @@ jobs:
       - name: Prepare updater signing key (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
+        env:
+          TAURI_PRIVATE_KEY_RAW: ${{ secrets.TAURI_PRIVATE_KEY }}
         run: |
           $keyPath = Join-Path $env:RUNNER_TEMP "tauri.key"
-          [System.IO.File]::WriteAllText($keyPath, @'
-${{ secrets.TAURI_PRIVATE_KEY }}
-'@)
+          [System.IO.File]::WriteAllText($keyPath, $env:TAURI_PRIVATE_KEY_RAW)
           "TAURI_SIGNING_PRIVATE_KEY_PATH=$keyPath" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
       # Tauri 官方打包 action
