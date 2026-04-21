@@ -57,22 +57,38 @@ function makeSkill(
   };
 }
 
-export function buildDemoSnapshot(customRoots: string[]): SkillSnapshot {
-  const codex = makeSource("Codex Skills", "codex", "builtin", "/Users/demo/.codex/skills", "ready");
+export function resolveDemoHomePath(userAgent: string): string {
+  if (/Windows/i.test(userAgent)) {
+    return "C:/Users/demo";
+  }
+
+  if (/Macintosh|Mac OS X/i.test(userAgent)) {
+    return "/Users/demo";
+  }
+
+  return "/home/demo";
+}
+
+export function buildDemoSnapshot(
+  customRoots: string[],
+  userAgent = typeof navigator === "undefined" ? "" : navigator.userAgent,
+): SkillSnapshot {
+  const demoHome = resolveDemoHomePath(userAgent);
+  const codex = makeSource("Codex Skills", "codex", "builtin", `${demoHome}/.codex/skills`, "ready");
   const superpowers = makeSource(
     "Codex Superpowers",
     "codex",
     "builtin",
-    "/Users/demo/.codex/superpowers/skills",
+    `${demoHome}/.codex/superpowers/skills`,
     "ready",
   );
-  const claude = makeSource("Claude Skills", "claude", "builtin", "/Users/demo/.claude/skills", "warning");
-  const gemini = makeSource("Gemini Skills", "gemini", "builtin", "/Users/demo/.gemini/skills", "ready");
+  const claude = makeSource("Claude Skills", "claude", "builtin", `${demoHome}/.claude/skills`, "warning");
+  const gemini = makeSource("Gemini Skills", "gemini", "builtin", `${demoHome}/.gemini/skills`, "ready");
   const opencode = makeSource(
     "OpenCode Skills",
     "opencode",
     "builtin",
-    "/Users/demo/.opencode/skills",
+    `${demoHome}/.opencode/skills`,
     "ready",
   );
   const customSources = customRoots.map((rootPath, index) =>
