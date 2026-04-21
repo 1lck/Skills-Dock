@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import {
   aggregateInstalledSkills,
   countInstalledApps,
+  sortInstalledSkills,
 } from "../lib/application/skills-catalog";
 import { buildDemoSnapshot } from "../lib/fixtures/demo-snapshot";
 import type {
@@ -144,22 +145,23 @@ export function useSkillsDock() {
       ]),
     ].some((value) => value.toLowerCase().includes(query));
   });
+  const sortedSkills = sortInstalledSkills(filteredSkills, usageMap);
 
   useEffect(() => {
-    if (filteredSkills.length === 0) {
+    if (sortedSkills.length === 0) {
       setSelectedSkillId(null);
       return;
     }
 
-    if (selectedSkillId && !filteredSkills.some((skill) => skill.id === selectedSkillId)) {
+    if (selectedSkillId && !sortedSkills.some((skill) => skill.id === selectedSkillId)) {
       setSelectedSkillId(null);
     }
-  }, [filteredSkills, selectedSkillId]);
+  }, [selectedSkillId, sortedSkills]);
 
   useEffect(() => {
-    const visibleIds = new Set(filteredSkills.map((skill) => skill.id));
+    const visibleIds = new Set(sortedSkills.map((skill) => skill.id));
     setSelectedSkillIds((current) => current.filter((skillId) => visibleIds.has(skillId)));
-  }, [filteredSkills]);
+  }, [sortedSkills]);
 
   async function addFolder() {
     if (demoMode) {
@@ -249,7 +251,7 @@ export function useSkillsDock() {
       return;
     }
 
-    const requests = filteredSkills
+    const requests = sortedSkills
       .filter((skill) => selectedSkillIds.includes(skill.id))
       .map((skill) => {
         const sourceSkillPath =
@@ -290,9 +292,9 @@ export function useSkillsDock() {
     batchBusy,
     usageMap,
     installedApps,
-    skills: filteredSkills,
+    skills: sortedSkills,
     selectedSkill:
-      filteredSkills.find((skill) => skill.id === selectedSkillId) ?? null,
+      sortedSkills.find((skill) => skill.id === selectedSkillId) ?? null,
     selectedSkillIds,
     search,
     selectedSourceId,

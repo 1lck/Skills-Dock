@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import type { SkillDetail } from "../models/skill";
-import { aggregateInstalledSkills, countInstalledApps } from "./skills-catalog";
+import { aggregateInstalledSkills, countInstalledApps, sortInstalledSkills } from "./skills-catalog";
 
 const now = "2026-04-20T12:00:00.000Z";
 
@@ -217,5 +217,59 @@ describe("skills catalog aggregation", () => {
       gemini: 1,
       opencode: 1,
     });
+  });
+
+  test("sorts skills by call count before updated time", () => {
+    const sorted = sortInstalledSkills(
+      [
+        {
+          id: "1",
+          canonicalId: "translator",
+          name: "Translator",
+          status: "valid",
+          installationState: "ready",
+          preview: "desc",
+          updatedAt: "2026-04-20T14:00:00.000Z",
+          apps: { claude: true, codex: false, gemini: false, opencode: false },
+          installations: [],
+          primaryInstallation: null,
+        },
+        {
+          id: "2",
+          canonicalId: "reviewer",
+          name: "Reviewer",
+          status: "valid",
+          installationState: "ready",
+          preview: "desc",
+          updatedAt: "2026-04-20T13:00:00.000Z",
+          apps: { claude: false, codex: true, gemini: false, opencode: false },
+          installations: [],
+          primaryInstallation: null,
+        },
+        {
+          id: "3",
+          canonicalId: "planner",
+          name: "Planner",
+          status: "valid",
+          installationState: "ready",
+          preview: "desc",
+          updatedAt: "2026-04-20T12:00:00.000Z",
+          apps: { claude: false, codex: false, gemini: true, opencode: false },
+          installations: [],
+          primaryInstallation: null,
+        },
+      ],
+      {
+        reviewer: { callCount: 8, lastCalledAt: "2026-04-20T13:00:00.000Z" },
+        planner: { callCount: 8, lastCalledAt: "2026-04-20T12:00:00.000Z" },
+        translator: { callCount: 3, lastCalledAt: "2026-04-20T14:00:00.000Z" },
+      },
+    );
+
+    expect(sorted.map((skill) => skill.canonicalId)).toEqual([
+      "reviewer",
+      "planner",
+      "translator",
+    ]);
   });
 });

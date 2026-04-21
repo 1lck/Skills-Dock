@@ -6,6 +6,7 @@ import type {
   SkillDetail,
   SkillStatus,
 } from "../models/skill";
+import type { SkillUsageMap } from "../storage/skill-usage";
 
 const EMPTY_APPS: InstalledAppState = {
   claude: false,
@@ -83,6 +84,27 @@ export function countInstalledApps(
     },
     { claude: 0, codex: 0, gemini: 0, opencode: 0 },
   );
+}
+
+export function sortInstalledSkills(
+  skills: AggregatedInstalledSkill[],
+  usageMap: SkillUsageMap,
+): AggregatedInstalledSkill[] {
+  return [...skills].sort((left, right) => {
+    const countDiff =
+      (usageMap[right.canonicalId]?.callCount ?? 0) -
+      (usageMap[left.canonicalId]?.callCount ?? 0);
+    if (countDiff !== 0) {
+      return countDiff;
+    }
+
+    const updatedDiff = right.updatedAt.localeCompare(left.updatedAt);
+    if (updatedDiff !== 0) {
+      return updatedDiff;
+    }
+
+    return left.name.localeCompare(right.name);
+  });
 }
 
 function canonicalizeSkill(skill: SkillDetail): string {
