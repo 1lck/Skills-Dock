@@ -191,19 +191,86 @@ fn toggle_app_installs_in_home(
 }
 
 pub fn check_installed_apps() -> std::collections::HashMap<String, bool> {
-    let mut apps = std::collections::HashMap::new();
-    
-    let codex_root = Path::new(&expand_home("~/.codex", None)).exists();
-    let claude_root = Path::new(&expand_home("~/.claude", None)).exists();
-    let gemini_root = Path::new(&expand_home("~/.gemini", None)).exists();
-    let opencode_root = Path::new(&expand_home("~/.opencode", None)).exists();
+    check_installed_apps_in_env(None, None)
+}
 
-    apps.insert("codex".into(), codex_root);
-    apps.insert("claude".into(), claude_root);
-    apps.insert("gemini".into(), gemini_root);
-    apps.insert("opencode".into(), opencode_root);
+fn check_installed_apps_in_env(
+    home_override: Option<&Path>,
+    path_override: Option<&std::ffi::OsStr>,
+) -> std::collections::HashMap<String, bool> {
+    let mut apps = std::collections::HashMap::new();
+
+    let checks = [
+        ("codex", expand_home("~/.codex", home_override)),
+        ("claude", expand_home("~/.claude", home_override)),
+        ("gemini", expand_home("~/.gemini", home_override)),
+        ("opencode", expand_home("~/.opencode", home_override)),
+    ];
+
+    for (app, root) in checks {
+        let root_exists = Path::new(&root).exists();
+        let binary_exists = binary_exists_in_path(app, path_override);
+        apps.insert(app.into(), root_exists && binary_exists);
+    }
 
     apps
+}
+
+fn binary_exists_in_path(binary_name: &str, path_override: Option<&std::ffi::OsStr>) -> bool {
+    let owned_path;
+    let path_value = if let Some(path_override) = path_override {
+        path_override
+    } else {
+        owned_path = env::var_os("PATH");
+        let Some(value) = owned_path.as_deref() else {
+            return false;
+        };
+        value
+    };
+
+    let candidates = binary_candidates(binary_name);
+
+    env::split_paths(path_value).any(|dir| {
+        candidates
+            .iter()
+            .map(|candidate| dir.join(candidate))
+            .any(|path| path.is_file())
+    })
+}
+
+fn binary_candidates(binary_name: &str) -> Vec<String> {
+    #[cfg(windows)]
+    {
+        let mut candidates = vec![binary_name.to_string()];
+        let pathext = env::var_os("PATHEXT")
+            .map(|value| {
+                env::split_paths(&value)
+                    .filter_map(|path| path.to_str().map(str::to_string))
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_else(|| vec![".COM".into(), ".EXE".into(), ".BAT".into(), ".CMD".into()]);
+
+        for ext in pathext {
+            let ext = ext.trim();
+            if ext.is_empty() {
+                continue;
+            }
+
+            let normalized = if ext.starts_with('.') {
+                ext.to_string()
+            } else {
+                format!(".{ext}")
+            };
+            candidates.push(format!("{binary_name}{normalized}"));
+        }
+
+        candidates
+    }
+
+    #[cfg(not(windows))]
+    {
+        vec![binary_name.to_string()]
+    }
 }
 
 fn builtin_source(name: &str, tool_kind: ToolKind, path: &str) -> SourceRecord {
@@ -512,6 +579,7 @@ fn now_iso() -> String {
 
 #[cfg(test)]
 mod tests {
+    use std::env;
     use std::fs;
 
     use tempfile::tempdir;
@@ -519,8 +587,8 @@ mod tests {
     use crate::domain::{SourceInput, ToggleAppInstallRequest, ToolKind};
 
     use super::{
-        resolve_builtin_sources, scan_source, toggle_app_install_in_home,
-        toggle_app_installs_in_home,
+        check_installed_apps_in_env, resolve_builtin_sources, scan_source,
+        toggle_app_install_in_home, toggle_app_installs_in_home,
     };
 
     #[test]
@@ -700,5 +768,48 @@ mod tests {
 
         assert_eq!(result.skills.len(), 1);
         assert_eq!(result.skills[0].name, "Error Resolver");
+    }
+
+    #[test]
+    fn marks_app_installed_only_when_home_and_binary_both_exist() {
+        let temp = tempdir().unwrap();
+        let bin_dir = temp.path().join("bin");
+        fs::create_dir_all(&bin_dir).unwrap();
+
+        fs::create_dir_all(temp.path().join(".codex")).unwrap();
+        fs::create_dir_all(temp.path().join(".claude")).unwrap();
+        fs::create_dir_all(temp.path().join(".gemini")).unwrap();
+
+        for binary in ["codex", "claude", "opencode"] {
+            let candidate = bin_dir.join(super::binary_candidates(binary)[0].as_str());
+            fs::write(candidate, "").unwrap();
+        }
+
+        let path_value = env::join_paths([bin_dir]).unwrap();
+        let installed = check_installed_apps_in_env(Some(temp.path()), Some(path_value.as_os_str()));
+
+        assert_eq!(installed.get("codex"), Some(&true));
+        assert_eq!(installed.get("claude"), Some(&true));
+        assert_eq!(installed.get("gemini"), Some(&false));
+        assert_eq!(installed.get("opencode"), Some(&false));
+    }
+
+    #[test]
+    fn marks_all_apps_missing_when_path_has_no_matching_binaries() {
+        let temp = tempdir().unwrap();
+        for app_dir in [".codex", ".claude", ".gemini", ".opencode"] {
+            fs::create_dir_all(temp.path().join(app_dir)).unwrap();
+        }
+
+        let empty_bin_dir = temp.path().join("empty-bin");
+        fs::create_dir_all(&empty_bin_dir).unwrap();
+        let path_value = env::join_paths([empty_bin_dir]).unwrap();
+
+        let installed = check_installed_apps_in_env(Some(temp.path()), Some(path_value.as_os_str()));
+
+        assert_eq!(installed.get("codex"), Some(&false));
+        assert_eq!(installed.get("claude"), Some(&false));
+        assert_eq!(installed.get("gemini"), Some(&false));
+        assert_eq!(installed.get("opencode"), Some(&false));
     }
 }

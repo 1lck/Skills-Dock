@@ -875,11 +875,13 @@ h1, h2, h3, h4, h5, h6, .chip, .summary-pill, strong, .badge {
 }
 
 .app-pill.is-disabled {
-  opacity: 0.3;
+  opacity: 0.22;
   cursor: not-allowed;
-  filter: grayscale(100%);
+  filter: grayscale(100%) brightness(0.84);
+  box-shadow: none;
 }
 .batch-toggle-group.is-disabled {
-  opacity: 0.3;
+  opacity: 0.22;
+  filter: grayscale(100%) brightness(0.84);
   pointer-events: none;
 }

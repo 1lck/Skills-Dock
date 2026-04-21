@@ -91,7 +91,7 @@ export function useSkillsDock() {
     setSources(snapshot.sources);
     setAllSkills(snapshot.skills);
 
-    // 扫描 Claude / Codex 日志，获取真实调用次数
+    // 扫描 Claude / Codex / Gemini / OpenCode 的本地会话记录，获取真实调用次数
     if (!demoMode) {
       const scanned = await invoke<SkillUsageMap>("scan_skill_usage");
       setUsageMap(scanned);

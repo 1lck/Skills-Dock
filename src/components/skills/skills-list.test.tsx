@@ -49,6 +49,35 @@ const skill: AggregatedInstalledSkill = {
 };
 
 describe("SkillsList", () => {
+  test("disables app toggle buttons for apps that are not installed locally", () => {
+    const onToggleApp = vi.fn();
+
+    render(
+      <SkillsList
+        skills={[skill]}
+        sources={sources}
+        loading={false}
+        selectedSkillId={skill.id}
+        selectedSkillIds={[]}
+        batchBusy={false}
+        usageMap={{}}
+        installedApps={{ ...installedApps, gemini: false }}
+        onSelectSkill={vi.fn()}
+        onToggleSkillSelection={vi.fn()}
+        onToggleSelectAllVisible={vi.fn()}
+        onClearSelection={vi.fn()}
+        onBatchApply={vi.fn()}
+        onToggleApp={onToggleApp}
+      />,
+    );
+
+    const geminiToggle = screen.getByRole("button", { name: "切换 Gemini 安装状态" });
+    expect(geminiToggle).toBeDisabled();
+
+    fireEvent.click(geminiToggle);
+    expect(onToggleApp).not.toHaveBeenCalled();
+  });
+
   test.skip("supports selecting rows and triggering batch install actions [UI not yet implemented in SkillsList]", () => {
     const onToggleSkillSelection = vi.fn();
     const onBatchApply = vi.fn();
