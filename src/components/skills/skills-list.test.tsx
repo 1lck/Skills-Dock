@@ -15,6 +15,12 @@ const sources: SourceRecord[] = [
     lastIndexedAt: "2026-04-20T12:00:00.000Z",
   },
 ];
+const installedApps = {
+  claude: true,
+  codex: true,
+  gemini: true,
+  opencode: true,
+};
 
 const skill: AggregatedInstalledSkill = {
   id: "frontend-skill",
@@ -55,6 +61,8 @@ describe("SkillsList", () => {
         selectedSkillId={skill.id}
         selectedSkillIds={[skill.id]}
         batchBusy={false}
+        usageMap={{}}
+        installedApps={installedApps}
         onSelectSkill={vi.fn()}
         onToggleSkillSelection={onToggleSkillSelection}
         onToggleSelectAllVisible={vi.fn()}

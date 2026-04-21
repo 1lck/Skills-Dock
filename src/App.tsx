@@ -1,7 +1,6 @@
 import { useEffect } from "react";
 import { check } from "@tauri-apps/plugin-updater";
 import { ask, message } from "@tauri-apps/plugin-dialog";
-import { relaunch } from "@tauri-apps/plugin-process"; // Ensure we have this if needed, or just let it restart
 
 import "./App.css";
 import { AppShell } from "./components/layout/app-shell";

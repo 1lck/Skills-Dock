@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, test, vi } from "vitest";
 
 import { aggregateInstalledSkills } from "../../lib/application/skills-catalog";
@@ -46,6 +46,12 @@ const appCounts = {
   gemini: 0,
   opencode: 0,
 };
+const installedApps = {
+  claude: true,
+  codex: true,
+  gemini: true,
+  opencode: true,
+};
 
 describe("AppShell", () => {
   test("renders skills region and no detail when no skill selected", () => {
@@ -77,10 +83,11 @@ describe("AppShell", () => {
         onOpenPath={vi.fn()}
         onToggleApp={vi.fn()}
         usageMap={{}}
+        installedApps={installedApps}
       />,
     );
 
-    expect(screen.getByRole("region", { name: "Skills" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Frontend Skill" })).toBeVisible();
     // Detail panel is now a modal — it should not exist when no skill is selected
     expect(screen.queryByRole("region", { name: "Skill Detail" })).toBeNull();
   });
@@ -114,6 +121,7 @@ describe("AppShell", () => {
         onOpenPath={vi.fn()}
         onToggleApp={vi.fn()}
         usageMap={{}}
+        installedApps={installedApps}
       />,
     );
 
@@ -121,16 +129,8 @@ describe("AppShell", () => {
       target: { value: "frontend" },
     });
 
-    expect(
-      within(screen.getByRole("region", { name: "Skills" })).getByText(
-        "Frontend Skill",
-      ),
-    ).toBeVisible();
-    expect(
-      within(screen.getByRole("region", { name: "Skills" })).queryByText(
-        "Build modern interfaces.",
-      ),
-    ).toBeNull();
+    expect(screen.getByRole("button", { name: "Frontend Skill" })).toBeVisible();
+    expect(screen.getAllByText("Build modern interfaces.").length).toBeGreaterThan(0);
   });
 
   test("shows an empty detail state when no skill is selected", () => {
@@ -162,6 +162,7 @@ describe("AppShell", () => {
         onOpenPath={vi.fn()}
         onToggleApp={vi.fn()}
         usageMap={{}}
+        installedApps={installedApps}
       />,
     );
 
@@ -198,6 +199,7 @@ describe("AppShell", () => {
         onOpenPath={vi.fn()}
         onToggleApp={vi.fn()}
         usageMap={{}}
+        installedApps={installedApps}
       />,
     );
 
@@ -237,6 +239,7 @@ describe("AppShell", () => {
         onOpenPath={vi.fn()}
         onToggleApp={onToggleApp}
         usageMap={{}}
+        installedApps={installedApps}
       />,
     );
 
@@ -276,6 +279,7 @@ describe("AppShell", () => {
         onOpenPath={vi.fn()}
         onToggleApp={vi.fn()}
         usageMap={{}}
+        installedApps={installedApps}
       />,
     );
 
@@ -313,6 +317,7 @@ describe("AppShell", () => {
         onOpenPath={vi.fn()}
         onToggleApp={vi.fn()}
         usageMap={{}}
+        installedApps={installedApps}
       />,
     );
 
@@ -353,6 +358,7 @@ describe("AppShell", () => {
         onOpenPath={vi.fn()}
         onToggleApp={vi.fn()}
         usageMap={{}}
+        installedApps={installedApps}
       />,
     );
 
