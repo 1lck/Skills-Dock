@@ -1,14 +1,26 @@
 import { MessageCircle } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 
+import type { AiSummaryProvider, AiSummaryState } from "../../lib/models/ai-summary";
 import type { AggregatedInstalledSkill } from "../../lib/models/skill";
 
 interface SkillDetailProps {
   skill: AggregatedInstalledSkill | null;
   onOpenPath: (path: string) => void;
+  aiSummary?: AiSummaryState | null;
+  selectedAiProvider?: AiSummaryProvider | null;
+  onGenerateAiSummary?: () => void;
+  onGenerateAiSummaryWithProvider?: (provider: AiSummaryProvider) => void;
 }
 
-export function SkillDetailPanel({ skill, onOpenPath }: SkillDetailProps) {
+export function SkillDetailPanel({
+  skill,
+  onOpenPath,
+  aiSummary = null,
+  selectedAiProvider = null,
+  onGenerateAiSummary,
+  onGenerateAiSummaryWithProvider,
+}: SkillDetailProps) {
   return (
     <section aria-label="Skill Detail" className="detail-panel app-store-layout">
       {!skill ? (
@@ -36,7 +48,15 @@ export function SkillDetailPanel({ skill, onOpenPath }: SkillDetailProps) {
               <p className="app-subtitle">{skill.preview}</p>
             </div>
 
+            <AiSummarySection
+              aiSummary={aiSummary}
+              onGenerateAiSummary={onGenerateAiSummary}
+              onGenerateAiSummaryWithProvider={onGenerateAiSummaryWithProvider}
+              selectedAiProvider={selectedAiProvider}
+            />
+
             <div className="markdown-card">
+              <p className="muted-label" style={{ marginTop: 0 }}>原始 Markdown</p>
               <div className="markdown-body">
                 <ReactMarkdown>
                   {skill.primaryInstallation?.content || "暂无详细内容。"}
@@ -92,6 +112,87 @@ export function SkillDetailPanel({ skill, onOpenPath }: SkillDetailProps) {
   );
 }
 
+function AiSummarySection({
+  aiSummary,
+  selectedAiProvider,
+  onGenerateAiSummary,
+  onGenerateAiSummaryWithProvider,
+}: {
+  aiSummary: AiSummaryState | null;
+  selectedAiProvider: AiSummaryProvider | null;
+  onGenerateAiSummary?: () => void;
+  onGenerateAiSummaryWithProvider?: (provider: AiSummaryProvider) => void;
+}) {
+  if (!aiSummary) {
+    return null;
+  }
+
+  return (
+    <div className="markdown-card ai-summary-card">
+      <div className="ai-summary-header">
+        <div>
+          <p className="muted-label" style={{ marginTop: 0 }}>AI 中文解读</p>
+          <p className="ai-summary-helper">
+            点选你要使用的本机 CLI
+          </p>
+        </div>
+        <div className="ai-provider-actions">
+          {aiSummary.availableProviders.map((provider) => {
+            const isSelected = (selectedAiProvider ?? aiSummary.provider) === provider;
+            const isRunningCurrent =
+              aiSummary.status === "running" && aiSummary.provider === provider;
+            return (
+              <button
+                key={provider}
+                className={`ai-provider-button ${isSelected ? "is-active" : ""}`}
+                disabled={isRunningCurrent}
+                onClick={() => onGenerateAiSummaryWithProvider?.(provider)}
+                type="button"
+              >
+                {labelForProvider(provider)}
+              </button>
+            );
+          })}
+          {aiSummary.availableProviders.length === 0 && aiSummary.status !== "unavailable" ? (
+            <button
+              className="btn-try-chat"
+              disabled={aiSummary.status === "running"}
+              onClick={() => onGenerateAiSummary?.()}
+              type="button"
+            >
+              {labelForSummaryAction(aiSummary.status)}
+            </button>
+          ) : null}
+        </div>
+      </div>
+
+      {aiSummary.status === "unavailable" ? (
+        <p className="ai-summary-helper">
+          未检测到支持的本机 CLI，可安装 Codex CLI 或 Claude Code 后再试。
+        </p>
+      ) : null}
+
+      {aiSummary.status === "running" ? (
+        <p className="ai-summary-helper">
+          正在后台生成中文摘要，完成后会自动刷新这里的内容。
+        </p>
+      ) : null}
+
+      {aiSummary.status === "error" ? (
+        <p className="ai-summary-error">{aiSummary.error ?? "生成中文摘要失败。"}</p>
+      ) : null}
+
+      {aiSummary.status === "complete" && aiSummary.result ? (
+        <div className="markdown-body ai-summary-body">
+          <h3>{aiSummary.result.titleZh}</h3>
+          <p>{aiSummary.result.summaryZh}</p>
+          <ReactMarkdown>{aiSummary.result.translatedMarkdownZh}</ReactMarkdown>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function shortHash(value: string): string {
   return value.slice(0, 8);
 }
@@ -111,5 +212,29 @@ function labelForValidation(status: AggregatedInstalledSkill["status"]): string 
       return "校验警告";
     case "invalid":
       return "校验失败";
+  }
+}
+
+function labelForSummaryAction(status: AiSummaryState["status"]): string {
+  switch (status) {
+    case "idle":
+      return "生成中文摘要";
+    case "running":
+      return "正在生成...";
+    case "error":
+      return "重新生成";
+    case "unavailable":
+      return "不可用";
+    case "complete":
+      return "已完成";
+  }
+}
+
+function labelForProvider(provider: AiSummaryProvider): string {
+  switch (provider) {
+    case "codex":
+      return "Codex";
+    case "claude":
+      return "Claude";
   }
 }

@@ -81,6 +81,12 @@ function App() {
       sources={skillsDock.sources}
       usageMap={skillsDock.usageMap}
       installedApps={skillsDock.installedApps}
+      aiSummary={skillsDock.selectedSkillAiSummary}
+      selectedAiProvider={skillsDock.selectedAiProvider}
+      onGenerateAiSummary={() => void skillsDock.generateAiSummary()}
+      onGenerateAiSummaryWithProvider={(provider) =>
+        void skillsDock.generateAiSummaryWithProvider(provider)
+      }
     />
   );
 }

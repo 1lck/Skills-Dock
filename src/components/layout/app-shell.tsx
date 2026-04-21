@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type { AiSummaryProvider, AiSummaryState } from "../../lib/models/ai-summary";
 import type {
   AggregatedInstalledSkill,
   AppKind,
@@ -26,6 +27,8 @@ interface AppShellProps {
   batchBusy: boolean;
   usageMap: SkillUsageMap;
   installedApps: Record<string, boolean>;
+  aiSummary?: AiSummaryState | null;
+  selectedAiProvider?: AiSummaryProvider | null;
   onSearchChange: (value: string) => void;
   onRefresh: () => void;
   onAddFolder: () => void;
@@ -39,6 +42,8 @@ interface AppShellProps {
   onBatchApply: (app: AppKind, enabled: boolean) => void;
   onOpenPath: (path: string) => void;
   onToggleApp: (skillId: string, app: AppKind, enabled: boolean) => void;
+  onGenerateAiSummary?: () => void;
+  onGenerateAiSummaryWithProvider?: (provider: AiSummaryProvider) => void;
 }
 
 export function AppShell({
@@ -56,6 +61,8 @@ export function AppShell({
   batchBusy,
   usageMap,
   installedApps,
+  aiSummary = null,
+  selectedAiProvider = null,
   onSearchChange,
   onRefresh,
   onAddFolder,
@@ -69,6 +76,8 @@ export function AppShell({
   onBatchApply,
   onOpenPath,
   onToggleApp,
+  onGenerateAiSummary,
+  onGenerateAiSummaryWithProvider,
 }: AppShellProps) {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const appFilters: Array<{
@@ -275,7 +284,11 @@ export function AppShell({
               ×
             </button>
             <SkillDetailPanel
+              aiSummary={aiSummary}
+              onGenerateAiSummary={onGenerateAiSummary}
+              onGenerateAiSummaryWithProvider={onGenerateAiSummaryWithProvider}
               onOpenPath={onOpenPath}
+              selectedAiProvider={selectedAiProvider}
               skill={selectedSkill}
             />
           </div>

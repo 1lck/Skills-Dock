@@ -1,8 +1,10 @@
 mod domain;
 mod scan;
+mod summary;
 mod usage;
 
 use domain::{SkillSnapshot, SourceInput, SourceRecord, ToggleAppInstallRequest};
+use summary::{SummaryRequest, SummarySnapshot, SummaryState};
 use std::collections::HashMap;
 
 #[tauri::command]
@@ -40,6 +42,24 @@ fn get_installed_apps() -> HashMap<String, bool> {
     scan::check_installed_apps()
 }
 
+#[tauri::command]
+fn get_skill_ai_summary(
+    app: tauri::AppHandle,
+    state: tauri::State<SummaryState>,
+    request: SummaryRequest,
+) -> Result<SummarySnapshot, String> {
+    summary::get_summary_status(&app, state.inner(), &request)
+}
+
+#[tauri::command]
+fn enqueue_skill_ai_summary(
+    app: tauri::AppHandle,
+    state: tauri::State<SummaryState>,
+    request: SummaryRequest,
+) -> Result<SummarySnapshot, String> {
+    summary::enqueue_summary(&app, state.inner(), request)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -47,6 +67,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
+        .manage(SummaryState::default())
         .invoke_handler(tauri::generate_handler![
             load_sources,
             scan_sources,
@@ -55,6 +76,8 @@ pub fn run() {
             toggle_app_installs,
             scan_skill_usage,
             get_installed_apps,
+            get_skill_ai_summary,
+            enqueue_skill_ai_summary,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -9,6 +9,12 @@ import {
 } from "../lib/application/skills-catalog";
 import { buildDemoSnapshot } from "../lib/fixtures/demo-snapshot";
 import type {
+  AiSummaryProvider,
+  AiSummaryRequest,
+  AiSummaryState,
+} from "../lib/models/ai-summary";
+import type {
+  AggregatedInstalledSkill,
   AppKind,
   InstallationState,
   SkillDetail,
@@ -68,6 +74,8 @@ export function useSkillsDock() {
   const [batchBusy, setBatchBusy] = useState(false);
   const [usageMap, setUsageMap] = useState<SkillUsageMap>({});
   const [installedApps, setInstalledApps] = useState<Record<string, boolean>>({});
+  const [selectedSkillAiSummary, setSelectedSkillAiSummary] = useState<AiSummaryState | null>(null);
+  const [selectedAiProvider, setSelectedAiProvider] = useState<AiSummaryProvider | null>(null);
 
   async function refresh(customRootsOverride?: string[]) {
     setLoading(true);
@@ -146,6 +154,11 @@ export function useSkillsDock() {
     ].some((value) => value.toLowerCase().includes(query));
   });
   const sortedSkills = sortInstalledSkills(filteredSkills, usageMap);
+  const selectedSkill =
+    sortedSkills.find((skill) => skill.id === selectedSkillId) ?? null;
+  const selectedSkillSummaryRequest = selectedSkill
+    ? toAiSummaryRequest(selectedSkill, selectedAiProvider)
+    : null;
 
   useEffect(() => {
     if (sortedSkills.length === 0) {
@@ -162,6 +175,59 @@ export function useSkillsDock() {
     const visibleIds = new Set(sortedSkills.map((skill) => skill.id));
     setSelectedSkillIds((current) => current.filter((skillId) => visibleIds.has(skillId)));
   }, [sortedSkills]);
+
+  useEffect(() => {
+    if (!selectedSkillSummaryRequest || demoMode) {
+      setSelectedSkillAiSummary(null);
+      setSelectedAiProvider(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadSummary() {
+      const snapshot = await invoke<AiSummaryState>("get_skill_ai_summary", {
+        request: selectedSkillSummaryRequest,
+      });
+      if (!cancelled) {
+        setSelectedAiProvider((current) => current ?? snapshot.provider ?? snapshot.availableProviders[0] ?? null);
+        setSelectedSkillAiSummary(snapshot);
+      }
+    }
+
+    void loadSummary();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    demoMode,
+    selectedSkillSummaryRequest?.contentHash,
+    selectedSkillSummaryRequest?.content,
+    selectedSkillSummaryRequest?.skillName,
+  ]);
+
+  useEffect(() => {
+    if (demoMode || !selectedSkillSummaryRequest || selectedSkillAiSummary?.status !== "running") {
+      return;
+    }
+
+    const interval = window.setInterval(() => {
+      void invoke<AiSummaryState>("get_skill_ai_summary", {
+        request: selectedSkillSummaryRequest,
+      }).then((snapshot) => {
+        setSelectedSkillAiSummary(snapshot);
+      });
+    }, 1500);
+
+    return () => window.clearInterval(interval);
+  }, [
+    demoMode,
+    selectedSkillAiSummary?.status,
+    selectedSkillSummaryRequest?.contentHash,
+    selectedSkillSummaryRequest?.content,
+    selectedSkillSummaryRequest?.skillName,
+  ]);
 
   async function addFolder() {
     if (demoMode) {
@@ -224,6 +290,32 @@ export function useSkillsDock() {
       },
     });
     await refresh();
+  }
+
+  async function generateAiSummary() {
+    if (demoMode || !selectedSkillSummaryRequest) {
+      return;
+    }
+
+    const snapshot = await invoke<AiSummaryState>("enqueue_skill_ai_summary", {
+      request: selectedSkillSummaryRequest,
+    });
+    setSelectedAiProvider(snapshot.provider);
+    setSelectedSkillAiSummary(snapshot);
+  }
+
+  async function generateAiSummaryWithProvider(provider: AiSummaryProvider) {
+    setSelectedAiProvider(provider);
+    if (demoMode || !selectedSkill) {
+      return;
+    }
+
+    const request = toAiSummaryRequest(selectedSkill, provider);
+    const snapshot = await invoke<AiSummaryState>("enqueue_skill_ai_summary", {
+      request,
+    });
+    setSelectedAiProvider(snapshot.provider);
+    setSelectedSkillAiSummary(snapshot);
   }
 
   function toggleSkillSelection(skillId: string) {
@@ -292,9 +384,10 @@ export function useSkillsDock() {
     batchBusy,
     usageMap,
     installedApps,
+    selectedSkillAiSummary,
+    selectedAiProvider,
     skills: sortedSkills,
-    selectedSkill:
-      sortedSkills.find((skill) => skill.id === selectedSkillId) ?? null,
+    selectedSkill,
     selectedSkillIds,
     search,
     selectedSourceId,
@@ -313,5 +406,25 @@ export function useSkillsDock() {
     addFolder,
     openPath,
     toggleApp,
+    generateAiSummary,
+    generateAiSummaryWithProvider,
+  };
+}
+
+function toAiSummaryRequest(
+  skill: AggregatedInstalledSkill,
+  provider: AiSummaryProvider | null,
+): AiSummaryRequest | null {
+  const content = skill.primaryInstallation?.content;
+  const contentHash = skill.primaryInstallation?.contentHash;
+  if (!content || !contentHash) {
+    return null;
+  }
+
+  return {
+    skillName: skill.name,
+    contentHash,
+    content,
+    provider,
   };
 }
