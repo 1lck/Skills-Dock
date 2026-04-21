@@ -327,6 +327,55 @@ describe("AppShell", () => {
     expect(screen.getByText("1")).toBeVisible();
   });
 
+  test("disables top app chips for apps that are not installed locally", () => {
+    const onSelectToolKind = vi.fn();
+
+    render(
+      <AppShell
+        loading={false}
+        isDemoMode={false}
+        sources={sources}
+        appCounts={appCounts}
+        skills={skills}
+        selectedSkill={skills[0]}
+        search=""
+        selectedInstallationState="all"
+        selectedToolKind="all"
+        selectedSourceId="all"
+        selectedSkillIds={[]}
+        batchBusy={false}
+        onSearchChange={vi.fn()}
+        onRefresh={vi.fn()}
+        onAddFolder={vi.fn()}
+        onSelectInstallationState={vi.fn()}
+        onSelectToolKind={onSelectToolKind}
+        onSelectSource={vi.fn()}
+        onSelectSkill={vi.fn()}
+        onToggleSkillSelection={vi.fn()}
+        onToggleSelectAllVisible={vi.fn()}
+        onClearSelection={vi.fn()}
+        onBatchApply={vi.fn()}
+        onOpenPath={vi.fn()}
+        onToggleApp={vi.fn()}
+        usageMap={{}}
+        installedApps={{ ...installedApps, gemini: false, opencode: false }}
+      />,
+    );
+
+    const geminiChip = screen.getByRole("button", { name: "按 Gemini 筛选" });
+    const opencodeChip = screen.getByRole("button", { name: "按 OpenCode 筛选" });
+
+    expect(geminiChip).toBeDisabled();
+    expect(opencodeChip).toBeDisabled();
+    expect(screen.getByText("未安装 Gemini，无法筛选")).toBeInTheDocument();
+    expect(screen.getByText("未安装 OpenCode，无法筛选")).toBeInTheDocument();
+
+    fireEvent.click(geminiChip);
+    fireEvent.click(opencodeChip);
+
+    expect(onSelectToolKind).not.toHaveBeenCalled();
+  });
+
   test("opens top filters and forwards installation state selection", () => {
     const onSelectInstallationState = vi.fn();
 

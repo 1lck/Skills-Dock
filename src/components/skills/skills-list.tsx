@@ -4,6 +4,7 @@ import type {
   SourceRecord,
 } from "../../lib/models/skill";
 import type { SkillUsageMap } from "../../lib/storage/skill-usage";
+import { DisabledHint } from "../common/disabled-hint";
 
 interface SkillsListProps {
   skills: AggregatedInstalledSkill[];
@@ -170,17 +171,22 @@ function AppStatusRail({
   return (
     <div className="app-status-rail">
       {apps.map((app) => (
-        <button
+        <DisabledHint
           key={app.key}
-          aria-label={`切换 ${labelForApp(app.key)} 安装状态`}
-          className={`${app.active ? "app-pill is-active" : "app-pill"} ${!app.installed ? "is-disabled" : ""}`}
-          onClick={() => app.installed && onToggleApp(skill.canonicalId, app.key, !app.active)}
-          title={app.installed ? app.key : `未安装 ${labelForApp(app.key)}`}
           disabled={!app.installed}
-          type="button"
+          message={`未安装 ${labelForApp(app.key)}，无法切换`}
         >
-          {app.label}
-        </button>
+          <button
+            aria-label={`切换 ${labelForApp(app.key)} 安装状态`}
+            className={`${app.active ? "app-pill is-active" : "app-pill"} ${!app.installed ? "is-disabled" : ""}`}
+            onClick={() => app.installed && onToggleApp(skill.canonicalId, app.key, !app.active)}
+            title={app.installed ? app.key : `未安装 ${labelForApp(app.key)}`}
+            disabled={!app.installed}
+            type="button"
+          >
+            {app.label}
+          </button>
+        </DisabledHint>
       ))}
       {customCount > 0 ? <span className="app-pill is-custom">+{customCount}</span> : null}
     </div>

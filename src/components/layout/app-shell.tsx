@@ -7,6 +7,7 @@ import type {
   ToolKind,
 } from "../../lib/models/skill";
 import type { SkillUsageMap } from "../../lib/storage/skill-usage";
+import { DisabledHint } from "../common/disabled-hint";
 import { SkillDetailPanel } from "../detail/skill-detail";
 import { SkillsList } from "../skills/skills-list";
 
@@ -70,11 +71,41 @@ export function AppShell({
   onToggleApp,
 }: AppShellProps) {
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const appFilters: Array<{ key: AppKind; label: string; count: number; className: string }> = [
-    { key: "claude", label: "Claude", count: appCounts.claude, className: "is-claude" },
-    { key: "codex", label: "Codex", count: appCounts.codex, className: "is-codex" },
-    { key: "gemini", label: "Gemini", count: appCounts.gemini, className: "is-gemini" },
-    { key: "opencode", label: "OpenCode", count: appCounts.opencode, className: "is-opencode" },
+  const appFilters: Array<{
+    key: AppKind;
+    label: string;
+    count: number;
+    className: string;
+    installed: boolean;
+  }> = [
+    {
+      key: "claude",
+      label: "Claude",
+      count: appCounts.claude,
+      className: "is-claude",
+      installed: installedApps.claude ?? false,
+    },
+    {
+      key: "codex",
+      label: "Codex",
+      count: appCounts.codex,
+      className: "is-codex",
+      installed: installedApps.codex ?? false,
+    },
+    {
+      key: "gemini",
+      label: "Gemini",
+      count: appCounts.gemini,
+      className: "is-gemini",
+      installed: installedApps.gemini ?? false,
+    },
+    {
+      key: "opencode",
+      label: "OpenCode",
+      count: appCounts.opencode,
+      className: "is-opencode",
+      installed: installedApps.opencode ?? false,
+    },
   ];
   const activeFilterCount = [
     selectedToolKind !== "all",
@@ -129,21 +160,37 @@ export function AppShell({
           </button>
           <div className="summary-pills">
             {appFilters.map((app) => (
-              <button
+              <DisabledHint
                 key={app.key}
-                aria-label={`按 ${app.label} 筛选`}
-                className={
-                  selectedToolKind === app.key
-                    ? `summary-pill ${app.className} is-active`
-                    : `summary-pill ${app.className}`
-                }
-                onClick={() =>
-                  onSelectToolKind(selectedToolKind === app.key ? "all" : app.key)
-                }
-                type="button"
+                disabled={!app.installed}
+                message={`未安装 ${app.label}，无法筛选`}
               >
-                {app.label}: {app.count}
-              </button>
+                <button
+                  aria-label={`按 ${app.label} 筛选`}
+                  className={
+                    [
+                      "summary-pill",
+                      app.className,
+                      selectedToolKind === app.key ? "is-active" : "",
+                      !app.installed ? "is-disabled" : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" ")
+                  }
+                  disabled={!app.installed}
+                  onClick={() => {
+                    if (!app.installed) {
+                      return;
+                    }
+
+                    onSelectToolKind(selectedToolKind === app.key ? "all" : app.key);
+                  }}
+                  title={app.installed ? app.label : `未安装 ${app.label}`}
+                  type="button"
+                >
+                  {app.label}: {app.count}
+                </button>
+              </DisabledHint>
             ))}
           </div>
         </div>
