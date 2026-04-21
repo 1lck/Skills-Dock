@@ -40,6 +40,10 @@ function App() {
         }
       } catch (err) {
         console.error("Update check failed:", err);
+        await message("检查更新失败。请确认当前网络可访问 GitHub Releases，或稍后重试。", {
+          title: "无法检查更新",
+          kind: "warning",
+        });
       }
     }
 
