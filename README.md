@@ -69,7 +69,7 @@ sudo apt-get install -f
 - 展示 Claude、Codex、Gemini、OpenCode 各自的安装状态
 - 通过复制或删除目标目录中的 Skill 文件夹，切换单个应用的安装状态
 - 预览 `SKILL.md`、校验状态、安装位置以及内容差异
-- **自动调用统计**：通过 Rust 解析 Claude Code 与 Codex 的底层对话日志，自动且真实地反映 Agent 在背后调用各 Skill 的次数
+- **自动调用统计**：通过 Rust 解析 Claude、Codex、Gemini、OpenCode 的本地会话记录，自动且真实地反映 Agent 在背后调用各 Skill 的次数
 
 ## 🚧 暂未包含
 
