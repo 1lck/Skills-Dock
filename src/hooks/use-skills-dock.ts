@@ -1,4 +1,4 @@
-import { open } from "@tauri-apps/plugin-dialog";
+import { message, open, save } from "@tauri-apps/plugin-dialog";
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import { useEffect, useState } from "react";
 
@@ -30,6 +30,16 @@ import {
   type StorageLike,
 } from "../lib/storage/custom-sources";
 import type { SkillUsageMap } from "../lib/storage/skill-usage";
+
+interface ImportSkillsZipResult {
+  targetRoot: string;
+  importedSkillPaths: string[];
+}
+
+interface ExportSkillsZipResult {
+  outputPath: string;
+  exportedSkillCount: number;
+}
 
 function isTauriRuntime(): boolean {
   return isTauri();
@@ -249,6 +259,58 @@ export function useSkillsDock() {
     await refresh(nextRoots);
   }
 
+  async function importFromZip() {
+    if (demoMode) {
+      return;
+    }
+
+    const selectedZip = await open({
+      directory: false,
+      multiple: false,
+      filters: [{ name: "ZIP", extensions: ["zip"] }],
+      title: "选择 Skills ZIP 包",
+    });
+
+    if (!selectedZip || Array.isArray(selectedZip)) {
+      return;
+    }
+
+    const selectedTarget = await open({
+      directory: true,
+      multiple: false,
+      title: "选择导入目标目录",
+    });
+
+    if (!selectedTarget || Array.isArray(selectedTarget)) {
+      return;
+    }
+
+    try {
+      const result = await invoke<ImportSkillsZipResult>("import_skills_zip", {
+        request: {
+          zipPath: selectedZip,
+          targetRoot: selectedTarget,
+        },
+      });
+
+      const nextRoots = addCustomSource(loadCustomSources(storage), selectedTarget);
+      saveCustomSources(storage, nextRoots);
+      await refresh(nextRoots);
+      await message(
+        `已导入 ${result.importedSkillPaths.length} 个 Skills 到：\n${result.targetRoot}`,
+        {
+          title: "导入完成",
+          kind: "info",
+        },
+      );
+    } catch (error) {
+      await message(`ZIP 导入失败：${describeError(error)}`, {
+        title: "导入失败",
+        kind: "error",
+      });
+    }
+  }
+
   async function openPath(path: string) {
     if (demoMode) {
       return;
@@ -290,6 +352,71 @@ export function useSkillsDock() {
       },
     });
     await refresh();
+  }
+
+  async function exportSelectedSkills() {
+    if (demoMode || selectedSkillIds.length === 0) {
+      return;
+    }
+
+    const skills = sortedSkills
+      .filter((skill) => selectedSkillIds.includes(skill.id))
+      .map((skill) => {
+        const sourceSkillPath =
+          skill.primaryInstallation?.skillPath ?? skill.installations[0]?.skillPath;
+
+        if (!sourceSkillPath) {
+          return null;
+        }
+
+        return {
+          skillId: skill.canonicalId,
+          sourceSkillPath,
+        };
+      })
+      .filter((entry): entry is NonNullable<typeof entry> => entry !== null);
+
+    if (skills.length === 0) {
+      return;
+    }
+
+    const suggestedName =
+      skills.length === 1
+        ? `${skills[0].skillId}.zip`
+        : `skills-dock-export-${skills.length}.zip`;
+    const selectedOutput = await save({
+      title: "导出 Skills ZIP",
+      defaultPath: suggestedName,
+      filters: [{ name: "ZIP", extensions: ["zip"] }],
+    });
+
+    if (!selectedOutput) {
+      return;
+    }
+
+    const outputPath = selectedOutput.toLowerCase().endsWith(".zip")
+      ? selectedOutput
+      : `${selectedOutput}.zip`;
+    try {
+      const result = await invoke<ExportSkillsZipResult>("export_skills_zip", {
+        request: {
+          outputPath,
+          skills,
+        },
+      });
+      await message(
+        `已导出 ${result.exportedSkillCount} 个 Skills 到：\n${result.outputPath}`,
+        {
+          title: "导出完成",
+          kind: "info",
+        },
+      );
+    } catch (error) {
+      await message(`ZIP 导出失败：${describeError(error)}`, {
+        title: "导出失败",
+        kind: "error",
+      });
+    }
   }
 
   async function generateAiSummary() {
@@ -404,6 +531,8 @@ export function useSkillsDock() {
     batchApply,
     refresh,
     addFolder,
+    importFromZip,
+    exportSelectedSkills,
     openPath,
     toggleApp,
     generateAiSummary,
@@ -427,4 +556,12 @@ function toAiSummaryRequest(
     content,
     provider,
   };
+}
+
+function describeError(error: unknown): string {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  return String(error);
 }

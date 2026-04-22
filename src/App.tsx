@@ -13,14 +13,14 @@ function App() {
   useEffect(() => {
     async function checkForUpdates() {
       try {
-        // 在开发环境 (Demo) 下跳过更新检查
-        if (skillsDock.isDemoMode) return;
+        // 开发调试和 Demo 模式都不做启动更新检查，避免打断当前使用。
+        if (skillsDock.isDemoMode || import.meta.env.DEV) return;
 
         const update = await check();
         if (update) {
           const shouldUpdate = await ask(
-            `发现新版本 v${update.version}！\n\n更新说明：\n${update.body || "无详细说明"}\n\n是否立即下载并安装？`,
-            { title: "Skills Dock 发现新版本", kind: "info" }
+            `发现新版本 v${update.version}。\n\n更新说明：\n${update.body || "无详细说明"}\n\n是否现在下载并安装？`,
+            { title: "Skills Dock 可选更新", kind: "info" }
           );
 
           if (shouldUpdate) {
@@ -39,11 +39,8 @@ function App() {
           }
         }
       } catch (err) {
-        console.error("Update check failed:", err);
-        await message("检查更新失败。请确认当前网络可访问 GitHub Releases，或稍后重试。", {
-          title: "无法检查更新",
-          kind: "warning",
-        });
+        // 不用弹窗阻断用户；网络、GitHub 可达性和本地环境都可能导致失败。
+        console.warn("Update check skipped due to error:", err);
       }
     }
 
@@ -55,6 +52,8 @@ function App() {
       isDemoMode={skillsDock.isDemoMode}
       loading={skillsDock.loading}
       onAddFolder={() => void skillsDock.addFolder()}
+      onImportZip={() => void skillsDock.importFromZip()}
+      onExportSelected={() => void skillsDock.exportSelectedSkills()}
       onOpenPath={(path) => void skillsDock.openPath(path)}
       onRefresh={() => void skillsDock.refresh()}
       onSearchChange={skillsDock.setSearch}
@@ -77,6 +76,7 @@ function App() {
       selectedToolKind={skillsDock.selectedToolKind}
       selectedSourceId={skillsDock.selectedSourceId}
       selectedSkillIds={skillsDock.selectedSkillIds}
+      exportSelectionCount={skillsDock.selectedSkillIds.length}
       skills={skillsDock.skills}
       sources={skillsDock.sources}
       usageMap={skillsDock.usageMap}

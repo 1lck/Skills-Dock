@@ -32,6 +32,8 @@ interface AppShellProps {
   onSearchChange: (value: string) => void;
   onRefresh: () => void;
   onAddFolder: () => void;
+  onImportZip: () => void;
+  onExportSelected: () => void;
   onSelectInstallationState: (status: InstallationState | "all") => void;
   onSelectToolKind: (toolKind: ToolKind | "all") => void;
   onSelectSource: (sourceId: string | "all") => void;
@@ -44,6 +46,7 @@ interface AppShellProps {
   onToggleApp: (skillId: string, app: AppKind, enabled: boolean) => void;
   onGenerateAiSummary?: () => void;
   onGenerateAiSummaryWithProvider?: (provider: AiSummaryProvider) => void;
+  exportSelectionCount: number;
 }
 
 export function AppShell({
@@ -66,6 +69,8 @@ export function AppShell({
   onSearchChange,
   onRefresh,
   onAddFolder,
+  onImportZip,
+  onExportSelected,
   onSelectInstallationState,
   onSelectToolKind,
   onSelectSource,
@@ -78,6 +83,7 @@ export function AppShell({
   onToggleApp,
   onGenerateAiSummary,
   onGenerateAiSummaryWithProvider,
+  exportSelectionCount,
 }: AppShellProps) {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const appFilters: Array<{
@@ -136,12 +142,21 @@ export function AppShell({
           <button onClick={onAddFolder} type="button">
             导入已有
           </button>
-          <button disabled type="button">
+          <button onClick={onImportZip} type="button">
             从 ZIP 安装
           </button>
-          <button disabled type="button">
-            发现技能
+          <button
+            disabled={exportSelectionCount === 0}
+            onClick={onExportSelected}
+            type="button"
+          >
+            导出所选{exportSelectionCount > 0 ? ` (${exportSelectionCount})` : ""}
           </button>
+          <DisabledHint disabled message="发现技能功能待开发">
+            <button disabled type="button">
+              发现技能
+            </button>
+          </DisabledHint>
         </div>
       </header>
 

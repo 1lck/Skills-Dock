@@ -3,7 +3,10 @@ mod scan;
 mod summary;
 mod usage;
 
-use domain::{SkillSnapshot, SourceInput, SourceRecord, ToggleAppInstallRequest};
+use domain::{
+    ExportSkillsZipRequest, ExportSkillsZipResult, ImportSkillsZipRequest, ImportSkillsZipResult,
+    SkillSnapshot, SourceInput, SourceRecord, ToggleAppInstallRequest,
+};
 use summary::{SummaryRequest, SummarySnapshot, SummaryState};
 use std::collections::HashMap;
 
@@ -30,6 +33,16 @@ fn toggle_app_install(request: ToggleAppInstallRequest) -> Result<(), String> {
 #[tauri::command]
 fn toggle_app_installs(requests: Vec<ToggleAppInstallRequest>) -> Result<(), String> {
     scan::toggle_app_installs(&requests).map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn import_skills_zip(request: ImportSkillsZipRequest) -> Result<ImportSkillsZipResult, String> {
+    scan::import_skills_zip(&request).map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn export_skills_zip(request: ExportSkillsZipRequest) -> Result<ExportSkillsZipResult, String> {
+    scan::export_skills_zip(&request).map_err(|error| error.to_string())
 }
 
 #[tauri::command]
@@ -74,6 +87,8 @@ pub fn run() {
             open_path,
             toggle_app_install,
             toggle_app_installs,
+            import_skills_zip,
+            export_skills_zip,
             scan_skill_usage,
             get_installed_apps,
             get_skill_ai_summary,

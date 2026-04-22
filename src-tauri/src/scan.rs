@@ -1,5 +1,6 @@
 use std::{
-    env, fs, io,
+    env, fs,
+    io::{self, Read, Write},
     path::{Path, PathBuf},
     process::Command,
     time::SystemTime,
@@ -8,8 +9,12 @@ use std::{
 use sha2::{Digest, Sha256};
 use time::format_description::well_known::Rfc3339;
 use time::OffsetDateTime;
+use zip::{
+    write::FileOptions, CompressionMethod, ZipArchive, ZipWriter,
+};
 
 use crate::domain::{
+    ExportSkillsZipRequest, ExportSkillsZipResult, ImportSkillsZipRequest, ImportSkillsZipResult,
     ScanResult, SkillDetail, SkillSnapshot, SourceInput, SourceRecord, ToggleAppInstallRequest,
     ToolKind, ValidationIssue,
 };
@@ -140,6 +145,95 @@ pub fn toggle_app_install(request: &ToggleAppInstallRequest) -> io::Result<()> {
 
 pub fn toggle_app_installs(requests: &[ToggleAppInstallRequest]) -> io::Result<()> {
     toggle_app_installs_in_home(requests, None)
+}
+
+pub fn import_skills_zip(request: &ImportSkillsZipRequest) -> io::Result<ImportSkillsZipResult> {
+    let zip_path = Path::new(&request.zip_path);
+    if !zip_path.is_file() {
+        return Err(io::Error::new(
+            io::ErrorKind::NotFound,
+            "zip file does not exist",
+        ));
+    }
+
+    let target_root = PathBuf::from(&request.target_root);
+    fs::create_dir_all(&target_root)?;
+
+    let extract_root = make_temp_work_dir("skills-dock-import")?;
+    extract_zip_archive(zip_path, &extract_root)?;
+
+    let mut imported_skill_paths = Vec::new();
+    let mut skill_dirs = Vec::new();
+    collect_skill_dirs(&extract_root, &mut skill_dirs)?;
+    skill_dirs.sort();
+
+    for skill_dir in skill_dirs {
+        let folder_name = skill_dir
+            .file_name()
+            .and_then(|segment| segment.to_str())
+            .filter(|segment| !segment.is_empty())
+            .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "invalid skill folder"))?;
+        let target_path = unique_target_path(&target_root, folder_name);
+        copy_dir_recursive(&skill_dir, &target_path)?;
+        imported_skill_paths.push(target_path.display().to_string());
+    }
+
+    let _ = fs::remove_dir_all(&extract_root);
+
+    if imported_skill_paths.is_empty() {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "zip archive does not contain any skills",
+        ));
+    }
+
+    Ok(ImportSkillsZipResult {
+        target_root: target_root.display().to_string(),
+        imported_skill_paths,
+    })
+}
+
+pub fn export_skills_zip(request: &ExportSkillsZipRequest) -> io::Result<ExportSkillsZipResult> {
+    if request.skills.is_empty() {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "no skills selected for export",
+        ));
+    }
+
+    let output_path = PathBuf::from(&request.output_path);
+    if let Some(parent) = output_path.parent() {
+        if !parent.as_os_str().is_empty() {
+            fs::create_dir_all(parent)?;
+        }
+    }
+
+    let file = fs::File::create(&output_path)?;
+    let mut writer = ZipWriter::new(file);
+
+    for skill in &request.skills {
+        let source_path = PathBuf::from(&skill.source_skill_path);
+        if !source_path.is_dir() {
+            return Err(io::Error::new(
+                io::ErrorKind::NotFound,
+                format!("skill path does not exist: {}", skill.source_skill_path),
+            ));
+        }
+
+        let folder_name = source_path
+            .file_name()
+            .and_then(|segment| segment.to_str())
+            .filter(|segment| !segment.is_empty())
+            .unwrap_or(&skill.skill_id);
+        add_directory_to_zip(&mut writer, &source_path, folder_name)?;
+    }
+
+    writer.finish()?;
+
+    Ok(ExportSkillsZipResult {
+        output_path: output_path.display().to_string(),
+        exported_skill_count: request.skills.len(),
+    })
 }
 
 fn toggle_app_install_in_home(
@@ -473,6 +567,103 @@ fn copy_dir_recursive(source: &Path, target: &Path) -> io::Result<()> {
     Ok(())
 }
 
+fn add_directory_to_zip(
+    writer: &mut ZipWriter<fs::File>,
+    source: &Path,
+    zip_root: &str,
+) -> io::Result<()> {
+    add_directory_entry(writer, zip_root)?;
+
+    for entry in fs::read_dir(source)? {
+        let entry = entry?;
+        let path = entry.path();
+        let entry_name = entry.file_name();
+        let entry_name = entry_name.to_string_lossy();
+        let zip_path = format!("{zip_root}/{entry_name}");
+
+        if entry.file_type()?.is_dir() {
+            add_directory_to_zip(writer, &path, &zip_path)?;
+            continue;
+        }
+
+        add_file_to_zip(writer, &path, &zip_path)?;
+    }
+
+    Ok(())
+}
+
+fn add_directory_entry(writer: &mut ZipWriter<fs::File>, path: &str) -> io::Result<()> {
+    let options: FileOptions<'_, ()> = FileOptions::default()
+        .compression_method(CompressionMethod::Deflated)
+        .unix_permissions(0o755);
+    writer
+        .add_directory(format!("{path}/"), options)
+        .map_err(io::Error::other)
+}
+
+fn add_file_to_zip(writer: &mut ZipWriter<fs::File>, source: &Path, zip_path: &str) -> io::Result<()> {
+    let options: FileOptions<'_, ()> = FileOptions::default()
+        .compression_method(CompressionMethod::Deflated)
+        .unix_permissions(0o644);
+    writer
+        .start_file(zip_path, options)
+        .map_err(io::Error::other)?;
+    let mut file = fs::File::open(source)?;
+    let mut buffer = Vec::new();
+    file.read_to_end(&mut buffer)?;
+    writer.write_all(&buffer)?;
+    Ok(())
+}
+
+fn extract_zip_archive(zip_path: &Path, target_root: &Path) -> io::Result<()> {
+    let file = fs::File::open(zip_path)?;
+    let mut archive = ZipArchive::new(file).map_err(io::Error::other)?;
+
+    for index in 0..archive.len() {
+        let mut entry = archive.by_index(index).map_err(io::Error::other)?;
+        let enclosed = entry.enclosed_name().map(PathBuf::from).ok_or_else(|| {
+            io::Error::new(io::ErrorKind::InvalidData, "zip archive contains an unsafe path")
+        })?;
+        let output_path = target_root.join(enclosed);
+
+        if entry.is_dir() {
+            fs::create_dir_all(&output_path)?;
+            continue;
+        }
+
+        if let Some(parent) = output_path.parent() {
+            fs::create_dir_all(parent)?;
+        }
+        let mut output = fs::File::create(&output_path)?;
+        io::copy(&mut entry, &mut output)?;
+    }
+
+    Ok(())
+}
+
+fn unique_target_path(target_root: &Path, base_name: &str) -> PathBuf {
+    let candidate = target_root.join(base_name);
+    if !candidate.exists() {
+        return candidate;
+    }
+
+    for index in 1.. {
+        let next = target_root.join(format!("{base_name}-imported-{index}"));
+        if !next.exists() {
+            return next;
+        }
+    }
+
+    unreachable!("infinite loop should always return for an unused path")
+}
+
+fn make_temp_work_dir(prefix: &str) -> io::Result<PathBuf> {
+    let now = OffsetDateTime::now_utc().unix_timestamp_nanos();
+    let base = env::temp_dir().join(format!("{prefix}-{now}"));
+    fs::create_dir_all(&base)?;
+    Ok(base)
+}
+
 fn expand_home(path: &str, home_override: Option<&Path>) -> String {
     if !path.starts_with("~/") {
         return path.to_string();
@@ -519,15 +710,19 @@ fn now_iso() -> String {
 
 #[cfg(test)]
 mod tests {
-    use std::fs;
+    use std::{fs, io::Write};
 
     use tempfile::tempdir;
+    use zip::{write::FileOptions, CompressionMethod, ZipWriter};
 
-    use crate::domain::{SourceInput, ToggleAppInstallRequest, ToolKind};
+    use crate::domain::{
+        ExportSkillsZipRequest, ImportSkillsZipRequest, SourceInput, ToggleAppInstallRequest,
+        ToolKind, ZipSkillEntry,
+    };
 
     use super::{
-        check_installed_apps_in_env, resolve_builtin_sources, scan_source,
-        toggle_app_install_in_home, toggle_app_installs_in_home,
+        check_installed_apps_in_env, export_skills_zip, import_skills_zip, resolve_builtin_sources,
+        scan_source, toggle_app_install_in_home, toggle_app_installs_in_home,
     };
 
     #[test]
@@ -734,5 +929,100 @@ mod tests {
         assert_eq!(installed.get("claude"), Some(&false));
         assert_eq!(installed.get("gemini"), Some(&false));
         assert_eq!(installed.get("opencode"), Some(&false));
+    }
+
+    #[test]
+    fn imports_skills_from_zip_archive_into_target_root() {
+        let temp = tempdir().unwrap();
+        let zip_path = temp.path().join("skills.zip");
+        create_test_zip(
+            &zip_path,
+            &[
+                ("skills/error-resolver/SKILL.md", "# Error Resolver\n"),
+                ("skills/translator/SKILL.md", "# Translator\n"),
+            ],
+        );
+
+        let result = import_skills_zip(&ImportSkillsZipRequest {
+            zip_path: zip_path.display().to_string(),
+            target_root: temp.path().join("imports").display().to_string(),
+        })
+        .unwrap();
+
+        assert_eq!(result.imported_skill_paths.len(), 2);
+        assert!(temp.path().join("imports/error-resolver/SKILL.md").exists());
+        assert!(temp.path().join("imports/translator/SKILL.md").exists());
+    }
+
+    #[test]
+    fn renames_imported_skill_when_target_already_exists() {
+        let temp = tempdir().unwrap();
+        let target_root = temp.path().join("imports");
+        fs::create_dir_all(target_root.join("error-resolver")).unwrap();
+        fs::write(
+            target_root.join("error-resolver/SKILL.md"),
+            "# Existing Error Resolver\n",
+        )
+        .unwrap();
+
+        let zip_path = temp.path().join("skills.zip");
+        create_test_zip(
+            &zip_path,
+            &[("error-resolver/SKILL.md", "# Imported Error Resolver\n")],
+        );
+
+        let result = import_skills_zip(&ImportSkillsZipRequest {
+            zip_path: zip_path.display().to_string(),
+            target_root: target_root.display().to_string(),
+        })
+        .unwrap();
+
+        assert_eq!(result.imported_skill_paths.len(), 1);
+        assert!(target_root.join("error-resolver/SKILL.md").exists());
+        assert!(target_root
+            .join("error-resolver-imported-1/SKILL.md")
+            .exists());
+    }
+
+    #[test]
+    fn exports_selected_skills_to_zip_archive() {
+        let temp = tempdir().unwrap();
+        let skill_root = temp.path().join("library/error-resolver");
+        fs::create_dir_all(&skill_root).unwrap();
+        fs::write(skill_root.join("SKILL.md"), "# Error Resolver\n").unwrap();
+        fs::write(skill_root.join("notes.txt"), "extra").unwrap();
+
+        let output_path = temp.path().join("exports/skills.zip");
+        let result = export_skills_zip(&ExportSkillsZipRequest {
+            output_path: output_path.display().to_string(),
+            skills: vec![ZipSkillEntry {
+                skill_id: "error-resolver".into(),
+                source_skill_path: skill_root.display().to_string(),
+            }],
+        })
+        .unwrap();
+
+        assert_eq!(result.exported_skill_count, 1);
+        assert!(output_path.exists());
+
+        let file = fs::File::open(output_path).unwrap();
+        let mut archive = zip::ZipArchive::new(file).unwrap();
+        assert!(archive.by_name("error-resolver/SKILL.md").is_ok());
+        assert!(archive.by_name("error-resolver/notes.txt").is_ok());
+    }
+
+    fn create_test_zip(path: &std::path::Path, files: &[(&str, &str)]) {
+        let file = fs::File::create(path).unwrap();
+        let mut writer = ZipWriter::new(file);
+        let options: FileOptions<'_, ()> = FileOptions::default()
+            .compression_method(CompressionMethod::Deflated)
+            .unix_permissions(0o644);
+
+        for (name, content) in files {
+            writer.start_file(name, options).unwrap();
+            writer.write_all(content.as_bytes()).unwrap();
+        }
+
+        writer.finish().unwrap();
     }
 }

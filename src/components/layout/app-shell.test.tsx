@@ -1,3 +1,4 @@
+import type { ComponentProps } from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, test, vi } from "vitest";
 
@@ -53,77 +54,54 @@ const installedApps = {
   opencode: true,
 };
 
+function renderShell(overrides: Partial<ComponentProps<typeof AppShell>> = {}) {
+  const props: ComponentProps<typeof AppShell> = {
+    loading: false,
+    isDemoMode: false,
+    sources,
+    appCounts,
+    skills,
+    selectedSkill: null,
+    selectedSkillIds: [],
+    exportSelectionCount: 0,
+    search: "",
+    selectedSourceId: "all",
+    selectedInstallationState: "all",
+    selectedToolKind: "all",
+    batchBusy: false,
+    usageMap: {},
+    installedApps,
+    onSearchChange: vi.fn(),
+    onRefresh: vi.fn(),
+    onAddFolder: vi.fn(),
+    onImportZip: vi.fn(),
+    onExportSelected: vi.fn(),
+    onSelectInstallationState: vi.fn(),
+    onSelectToolKind: vi.fn(),
+    onSelectSource: vi.fn(),
+    onSelectSkill: vi.fn(),
+    onToggleSkillSelection: vi.fn(),
+    onToggleSelectAllVisible: vi.fn(),
+    onClearSelection: vi.fn(),
+    onBatchApply: vi.fn(),
+    onOpenPath: vi.fn(),
+    onToggleApp: vi.fn(),
+    ...overrides,
+  };
+
+  return render(<AppShell {...props} />);
+}
+
 describe("AppShell", () => {
   test("renders skills region and no detail when no skill selected", () => {
-    render(
-      <AppShell
-        loading={false}
-        isDemoMode={false}
-        sources={sources}
-        appCounts={appCounts}
-        skills={skills}
-        selectedSkill={null}
-        search=""
-        selectedInstallationState="all"
-        selectedToolKind="all"
-        selectedSourceId="all"
-        selectedSkillIds={[]}
-        batchBusy={false}
-        onSearchChange={vi.fn()}
-        onRefresh={vi.fn()}
-        onAddFolder={vi.fn()}
-        onSelectInstallationState={vi.fn()}
-        onSelectToolKind={vi.fn()}
-        onSelectSource={vi.fn()}
-        onSelectSkill={vi.fn()}
-        onToggleSkillSelection={vi.fn()}
-        onToggleSelectAllVisible={vi.fn()}
-        onClearSelection={vi.fn()}
-        onBatchApply={vi.fn()}
-        onOpenPath={vi.fn()}
-        onToggleApp={vi.fn()}
-        usageMap={{}}
-        installedApps={installedApps}
-      />,
-    );
+    renderShell();
 
     expect(screen.getByRole("button", { name: "Frontend Skill" })).toBeVisible();
-    // Detail panel is now a modal — it should not exist when no skill is selected
     expect(screen.queryByRole("region", { name: "Skill Detail" })).toBeNull();
   });
 
   test("applies selected filters to the visible list", () => {
-    render(
-      <AppShell
-        loading={false}
-        isDemoMode={false}
-        sources={sources}
-        appCounts={appCounts}
-        skills={skills}
-        selectedSkill={skills[0]}
-        search=""
-        selectedInstallationState="all"
-        selectedToolKind="all"
-        selectedSourceId="all"
-        selectedSkillIds={[]}
-        batchBusy={false}
-        onSearchChange={vi.fn()}
-        onRefresh={vi.fn()}
-        onAddFolder={vi.fn()}
-        onSelectInstallationState={vi.fn()}
-        onSelectToolKind={vi.fn()}
-        onSelectSource={vi.fn()}
-        onSelectSkill={vi.fn()}
-        onToggleSkillSelection={vi.fn()}
-        onToggleSelectAllVisible={vi.fn()}
-        onClearSelection={vi.fn()}
-        onBatchApply={vi.fn()}
-        onOpenPath={vi.fn()}
-        onToggleApp={vi.fn()}
-        usageMap={{}}
-        installedApps={installedApps}
-      />,
-    );
+    renderShell({ selectedSkill: skills[0] });
 
     fireEvent.change(screen.getByLabelText("Search skills"), {
       target: { value: "frontend" },
@@ -134,114 +112,23 @@ describe("AppShell", () => {
   });
 
   test("shows an empty detail state when no skill is selected", () => {
-    render(
-      <AppShell
-        loading={false}
-        isDemoMode={false}
-        sources={sources}
-        appCounts={appCounts}
-        skills={skills}
-        selectedSkill={null}
-        search=""
-        selectedInstallationState="all"
-        selectedToolKind="all"
-        selectedSourceId="all"
-        selectedSkillIds={[]}
-        batchBusy={false}
-        onSearchChange={vi.fn()}
-        onRefresh={vi.fn()}
-        onAddFolder={vi.fn()}
-        onSelectInstallationState={vi.fn()}
-        onSelectToolKind={vi.fn()}
-        onSelectSource={vi.fn()}
-        onSelectSkill={vi.fn()}
-        onToggleSkillSelection={vi.fn()}
-        onToggleSelectAllVisible={vi.fn()}
-        onClearSelection={vi.fn()}
-        onBatchApply={vi.fn()}
-        onOpenPath={vi.fn()}
-        onToggleApp={vi.fn()}
-        usageMap={{}}
-        installedApps={installedApps}
-      />,
-    );
+    renderShell();
 
-    // Detail is now a modal — no modal rendered means no empty state text visible
-    expect(screen.queryByText("Select a skill to inspect its files and validation status.")).toBeNull();
+    expect(
+      screen.queryByText("Select a skill to inspect its files and validation status."),
+    ).toBeNull();
   });
 
   test("shows a demo mode banner when previewing mock data", () => {
-    render(
-      <AppShell
-        loading={false}
-        isDemoMode
-        sources={sources}
-        appCounts={appCounts}
-        skills={skills}
-        selectedSkill={skills[0]}
-        search=""
-        selectedInstallationState="all"
-        selectedToolKind="all"
-        selectedSourceId="all"
-        selectedSkillIds={[]}
-        batchBusy={false}
-        onSearchChange={vi.fn()}
-        onRefresh={vi.fn()}
-        onAddFolder={vi.fn()}
-        onSelectInstallationState={vi.fn()}
-        onSelectToolKind={vi.fn()}
-        onSelectSource={vi.fn()}
-        onSelectSkill={vi.fn()}
-        onToggleSkillSelection={vi.fn()}
-        onToggleSelectAllVisible={vi.fn()}
-        onClearSelection={vi.fn()}
-        onBatchApply={vi.fn()}
-        onOpenPath={vi.fn()}
-        onToggleApp={vi.fn()}
-        usageMap={{}}
-        installedApps={installedApps}
-      />,
-    );
+    renderShell({ isDemoMode: true, selectedSkill: skills[0] });
 
-    expect(
-      screen.getByText(/演示模式/),
-    ).toBeVisible();
+    expect(screen.getByText(/演示模式/)).toBeVisible();
   });
 
   test("toggles app install state from the skill row", () => {
     const onToggleApp = vi.fn();
 
-    render(
-      <AppShell
-        loading={false}
-        isDemoMode={false}
-        sources={sources}
-        appCounts={appCounts}
-        skills={skills}
-        selectedSkill={skills[0]}
-        search=""
-        selectedInstallationState="all"
-        selectedToolKind="all"
-        selectedSourceId="all"
-        selectedSkillIds={[]}
-        batchBusy={false}
-        onSearchChange={vi.fn()}
-        onRefresh={vi.fn()}
-        onAddFolder={vi.fn()}
-        onSelectInstallationState={vi.fn()}
-        onSelectToolKind={vi.fn()}
-        onSelectSource={vi.fn()}
-        onSelectSkill={vi.fn()}
-        onToggleSkillSelection={vi.fn()}
-        onToggleSelectAllVisible={vi.fn()}
-        onClearSelection={vi.fn()}
-        onBatchApply={vi.fn()}
-        onOpenPath={vi.fn()}
-        onToggleApp={onToggleApp}
-        usageMap={{}}
-        installedApps={installedApps}
-      />,
-    );
+    renderShell({ onToggleApp, selectedSkill: skills[0] });
 
     fireEvent.click(screen.getByRole("button", { name: "切换 Claude 安装状态" }));
 
@@ -251,37 +138,7 @@ describe("AppShell", () => {
   test("filters skills when clicking a top app summary chip", () => {
     const onSelectToolKind = vi.fn();
 
-    render(
-      <AppShell
-        loading={false}
-        isDemoMode={false}
-        sources={sources}
-        appCounts={appCounts}
-        skills={skills}
-        selectedSkill={skills[0]}
-        search=""
-        selectedInstallationState="all"
-        selectedToolKind="all"
-        selectedSourceId="all"
-        selectedSkillIds={[]}
-        batchBusy={false}
-        onSearchChange={vi.fn()}
-        onRefresh={vi.fn()}
-        onAddFolder={vi.fn()}
-        onSelectInstallationState={vi.fn()}
-        onSelectToolKind={onSelectToolKind}
-        onSelectSource={vi.fn()}
-        onSelectSkill={vi.fn()}
-        onToggleSkillSelection={vi.fn()}
-        onToggleSelectAllVisible={vi.fn()}
-        onClearSelection={vi.fn()}
-        onBatchApply={vi.fn()}
-        onOpenPath={vi.fn()}
-        onToggleApp={vi.fn()}
-        usageMap={{}}
-        installedApps={installedApps}
-      />,
-    );
+    renderShell({ onSelectToolKind, selectedSkill: skills[0] });
 
     fireEvent.click(screen.getByRole("button", { name: "按 Claude 筛选" }));
 
@@ -289,37 +146,11 @@ describe("AppShell", () => {
   });
 
   test("keeps top app counts independent from the filtered list count", () => {
-    render(
-      <AppShell
-        loading={false}
-        isDemoMode={false}
-        sources={sources}
-        appCounts={{ claude: 11, codex: 26, gemini: 0, opencode: 0 }}
-        skills={skills}
-        selectedSkill={skills[0]}
-        search=""
-        selectedInstallationState="all"
-        selectedToolKind="codex"
-        selectedSourceId="all"
-        selectedSkillIds={[]}
-        batchBusy={false}
-        onSearchChange={vi.fn()}
-        onRefresh={vi.fn()}
-        onAddFolder={vi.fn()}
-        onSelectInstallationState={vi.fn()}
-        onSelectToolKind={vi.fn()}
-        onSelectSource={vi.fn()}
-        onSelectSkill={vi.fn()}
-        onToggleSkillSelection={vi.fn()}
-        onToggleSelectAllVisible={vi.fn()}
-        onClearSelection={vi.fn()}
-        onBatchApply={vi.fn()}
-        onOpenPath={vi.fn()}
-        onToggleApp={vi.fn()}
-        usageMap={{}}
-        installedApps={installedApps}
-      />,
-    );
+    renderShell({
+      appCounts: { claude: 11, codex: 26, gemini: 0, opencode: 0 },
+      selectedSkill: skills[0],
+      selectedToolKind: "codex",
+    });
 
     expect(screen.getByRole("button", { name: "按 Codex 筛选" })).toHaveTextContent(
       "Codex: 26",
@@ -330,37 +161,11 @@ describe("AppShell", () => {
   test("disables top app chips for apps that are not installed locally", () => {
     const onSelectToolKind = vi.fn();
 
-    render(
-      <AppShell
-        loading={false}
-        isDemoMode={false}
-        sources={sources}
-        appCounts={appCounts}
-        skills={skills}
-        selectedSkill={skills[0]}
-        search=""
-        selectedInstallationState="all"
-        selectedToolKind="all"
-        selectedSourceId="all"
-        selectedSkillIds={[]}
-        batchBusy={false}
-        onSearchChange={vi.fn()}
-        onRefresh={vi.fn()}
-        onAddFolder={vi.fn()}
-        onSelectInstallationState={vi.fn()}
-        onSelectToolKind={onSelectToolKind}
-        onSelectSource={vi.fn()}
-        onSelectSkill={vi.fn()}
-        onToggleSkillSelection={vi.fn()}
-        onToggleSelectAllVisible={vi.fn()}
-        onClearSelection={vi.fn()}
-        onBatchApply={vi.fn()}
-        onOpenPath={vi.fn()}
-        onToggleApp={vi.fn()}
-        usageMap={{}}
-        installedApps={{ ...installedApps, gemini: false, opencode: false }}
-      />,
-    );
+    renderShell({
+      onSelectToolKind,
+      selectedSkill: skills[0],
+      installedApps: { ...installedApps, gemini: false, opencode: false },
+    });
 
     const geminiChip = screen.getByRole("button", { name: "按 Gemini 筛选" });
     const opencodeChip = screen.getByRole("button", { name: "按 OpenCode 筛选" });
@@ -379,7 +184,23 @@ describe("AppShell", () => {
   test("opens top filters and forwards installation state selection", () => {
     const onSelectInstallationState = vi.fn();
 
-    render(
+    renderShell({ onSelectInstallationState, selectedSkill: skills[0] });
+
+    fireEvent.click(screen.getByRole("button", { name: "打开筛选" }));
+    fireEvent.change(screen.getByLabelText("安装状态筛选"), {
+      target: { value: "conflict" },
+    });
+
+    expect(onSelectInstallationState).toHaveBeenCalledWith("conflict");
+  });
+
+  test("disables export button until at least one skill is selected", () => {
+    const onExportSelected = vi.fn();
+    const { rerender } = renderShell({ onExportSelected });
+
+    expect(screen.getByRole("button", { name: "导出所选" })).toBeDisabled();
+
+    rerender(
       <AppShell
         loading={false}
         isDemoMode={false}
@@ -387,16 +208,21 @@ describe("AppShell", () => {
         appCounts={appCounts}
         skills={skills}
         selectedSkill={skills[0]}
+        selectedSkillIds={[skills[0].id]}
+        exportSelectionCount={1}
         search=""
+        selectedSourceId="all"
         selectedInstallationState="all"
         selectedToolKind="all"
-        selectedSourceId="all"
-        selectedSkillIds={[]}
         batchBusy={false}
+        usageMap={{}}
+        installedApps={installedApps}
         onSearchChange={vi.fn()}
         onRefresh={vi.fn()}
         onAddFolder={vi.fn()}
-        onSelectInstallationState={onSelectInstallationState}
+        onImportZip={vi.fn()}
+        onExportSelected={onExportSelected}
+        onSelectInstallationState={vi.fn()}
         onSelectToolKind={vi.fn()}
         onSelectSource={vi.fn()}
         onSelectSkill={vi.fn()}
@@ -406,16 +232,21 @@ describe("AppShell", () => {
         onBatchApply={vi.fn()}
         onOpenPath={vi.fn()}
         onToggleApp={vi.fn()}
-        usageMap={{}}
-        installedApps={installedApps}
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "打开筛选" }));
-    fireEvent.change(screen.getByLabelText("安装状态筛选"), {
-      target: { value: "conflict" },
-    });
+    const exportButton = screen.getByRole("button", { name: "导出所选 (1)" });
+    expect(exportButton).toBeEnabled();
 
-    expect(onSelectInstallationState).toHaveBeenCalledWith("conflict");
+    fireEvent.click(exportButton);
+    expect(onExportSelected).toHaveBeenCalled();
+  });
+
+  test("shows discover button as disabled with a pending hint", () => {
+    renderShell();
+
+    const discoverButton = screen.getByRole("button", { name: "发现技能" });
+    expect(discoverButton).toBeDisabled();
+    expect(screen.getByText("发现技能功能待开发")).toBeInTheDocument();
   });
 });

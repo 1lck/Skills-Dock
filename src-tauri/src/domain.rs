@@ -84,3 +84,38 @@ pub struct ToggleAppInstallRequest {
     pub target_app: ToolKind,
     pub enabled: bool,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ZipSkillEntry {
+    pub skill_id: String,
+    pub source_skill_path: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ImportSkillsZipRequest {
+    pub zip_path: String,
+    pub target_root: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ImportSkillsZipResult {
+    pub target_root: String,
+    pub imported_skill_paths: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExportSkillsZipRequest {
+    pub output_path: String,
+    pub skills: Vec<ZipSkillEntry>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExportSkillsZipResult {
+    pub output_path: String,
+    pub exported_skill_count: usize,
+}

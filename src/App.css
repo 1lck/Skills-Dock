@@ -120,6 +120,17 @@ h1, h2, h3, h4, h5, h6, .chip, .summary-pill, strong, .badge {
   border-color: #334155;
 }
 
+.toolbar button:disabled,
+.detail-actions button:disabled {
+  background: #f8fafc;
+  color: #a1a1aa;
+  border-color: #e5e7eb;
+  box-shadow: none;
+  cursor: not-allowed;
+  filter: grayscale(100%) brightness(0.94);
+  opacity: 0.55;
+}
+
 /* --- Summary & Search Strip --- */
 .summary-strip {
   padding: 0 32px 16px;
