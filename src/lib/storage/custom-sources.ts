@@ -1,4 +1,8 @@
 const STORAGE_KEY = "skills-dock.custom-sources";
+const SOURCE_OVERRIDES_KEY = "skills-dock.source-overrides";
+
+export type SourceOverrideKey = "codex" | "claude" | "gemini" | "opencode";
+export type SourceOverrides = Partial<Record<SourceOverrideKey, string>>;
 
 export interface StorageLike {
   getItem(key: string): string | null;
@@ -43,4 +47,37 @@ export function addCustomSource(existingRoots: string[], nextRoot: string): stri
   return existingRoots.includes(nextRoot)
     ? existingRoots
     : [...existingRoots, nextRoot];
+}
+
+export function loadSourceOverrides(storage: StorageLike): SourceOverrides {
+  const raw = storage.getItem(SOURCE_OVERRIDES_KEY);
+
+  if (!raw) {
+    return {};
+  }
+
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return {};
+    }
+
+    const overrides: SourceOverrides = {};
+    for (const key of ["codex", "claude", "gemini", "opencode"] as const) {
+      const value = parsed[key];
+      if (typeof value === "string" && value.trim()) {
+        overrides[key] = value;
+      }
+    }
+    return overrides;
+  } catch {
+    return {};
+  }
+}
+
+export function saveSourceOverrides(
+  storage: StorageLike,
+  overrides: SourceOverrides,
+): void {
+  storage.setItem(SOURCE_OVERRIDES_KEY, JSON.stringify(overrides));
 }

@@ -85,6 +85,7 @@ function renderShell(overrides: Partial<ComponentProps<typeof AppShell>> = {}) {
     onClearSelection: vi.fn(),
     onBatchApply: vi.fn(),
     onOpenPath: vi.fn(),
+    onBrowseSource: vi.fn(),
     onToggleApp: vi.fn(),
     ...overrides,
   };
@@ -210,6 +211,7 @@ describe("AppShell", () => {
         onClearSelection={vi.fn()}
         onBatchApply={vi.fn()}
         onOpenPath={vi.fn()}
+        onBrowseSource={vi.fn()}
         onToggleApp={vi.fn()}
       />,
     );
@@ -227,5 +229,16 @@ describe("AppShell", () => {
     const discoverButton = screen.getByRole("button", { name: "发现技能" });
     expect(discoverButton).toBeDisabled();
     expect(screen.getByText("发现技能功能待开发")).toBeInTheDocument();
+  });
+
+  test("forwards settings browse actions for source rows", () => {
+    const onBrowseSource = vi.fn();
+    window.location.hash = "#settings";
+
+    renderShell({ onBrowseSource });
+
+    fireEvent.click(screen.getAllByRole("button", { name: "浏览 Codex Skills" })[0]);
+
+    expect(onBrowseSource).toHaveBeenCalledWith(sources[0], false);
   });
 });

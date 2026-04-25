@@ -68,6 +68,7 @@ function App() {
       onToggleApp={(skillId, app, enabled) =>
         void skillsDock.toggleApp(skillId, app, enabled)
       }
+      onBrowseSource={(source, log) => void skillsDock.browseSource(source, log)}
       appCounts={skillsDock.appCounts}
       batchBusy={skillsDock.batchBusy}
       search={skillsDock.search}
