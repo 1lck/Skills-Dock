@@ -62,9 +62,10 @@ export function loadSourceOverrides(storage: StorageLike): SourceOverrides {
       return {};
     }
 
+    const parsedRecord = parsed as Record<string, unknown>;
     const overrides: SourceOverrides = {};
     for (const key of ["codex", "claude", "gemini", "opencode"] as const) {
-      const value = parsed[key];
+      const value = parsedRecord[key];
       if (typeof value === "string" && value.trim()) {
         overrides[key] = value;
       }
