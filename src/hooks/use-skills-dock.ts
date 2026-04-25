@@ -23,10 +23,14 @@ import type {
   SourceRecord,
   ToolKind,
 } from "../lib/models/skill";
+import { makeSourceId } from "../lib/models/skill";
 import {
   addCustomSource,
   loadCustomSources,
+  loadSourceOverrides,
   saveCustomSources,
+  saveSourceOverrides,
+  type SourceOverrides,
   type StorageLike,
 } from "../lib/storage/custom-sources";
 import type { SkillUsageMap } from "../lib/storage/skill-usage";
@@ -68,6 +72,29 @@ function toSourceInput(source: SourceRecord): SourceInput {
   };
 }
 
+function applySourceOverrides(
+  sources: SourceRecord[],
+  overrides: SourceOverrides,
+): SourceRecord[] {
+  return sources.map((source) => {
+    if (source.sourceType !== "builtin" || source.toolKind === "generic") {
+      return source;
+    }
+
+    const overridePath = overrides[source.toolKind];
+    if (!overridePath || overridePath === source.rootPath) {
+      return source;
+    }
+
+    return {
+      ...source,
+      id: makeSourceId(source.toolKind, overridePath),
+      rootPath: overridePath,
+      lastIndexedAt: null,
+    };
+  });
+}
+
 export function useSkillsDock() {
   const demoMode = !isTauriRuntime();
   const storage = getStorage();
@@ -96,8 +123,12 @@ export function useSkillsDock() {
       const resolvedSources = await invoke<SourceRecord[]>("load_sources", {
         customRoots,
       });
+      const sourcesToScan = applySourceOverrides(
+        resolvedSources,
+        loadSourceOverrides(storage),
+      );
       snapshot = await invoke<SkillSnapshot>("scan_sources", {
-        sources: resolvedSources.map(toSourceInput),
+        sources: sourcesToScan.map(toSourceInput),
       });
       
       const appsInstalled = await invoke<Record<string, boolean>>("get_installed_apps");
@@ -319,6 +350,40 @@ export function useSkillsDock() {
     await invoke("open_path", { path });
   }
 
+  async function browseSource(source: SourceRecord, log = false) {
+    if (demoMode) {
+      return;
+    }
+
+    if (log) {
+      await openPath(source.rootPath.replace(/[/\\]skills$/u, "/logs"));
+      return;
+    }
+
+    if (source.toolKind === "generic") {
+      await openPath(source.rootPath);
+      return;
+    }
+
+    const selected = await open({
+      directory: true,
+      multiple: false,
+      defaultPath: source.rootPath,
+      title: `选择 ${source.name} 目录`,
+    });
+
+    if (!selected || Array.isArray(selected)) {
+      return;
+    }
+
+    const overrides = {
+      ...loadSourceOverrides(storage),
+      [source.toolKind]: selected,
+    };
+    saveSourceOverrides(storage, overrides);
+    await refresh();
+  }
+
 
   async function toggleApp(skillId: string, app: AppKind, enabled: boolean) {
     const aggregated = aggregateInstalledSkills(allSkills);
@@ -534,6 +599,7 @@ export function useSkillsDock() {
     importFromZip,
     exportSelectedSkills,
     openPath,
+    browseSource,
     toggleApp,
     generateAiSummary,
     generateAiSummaryWithProvider,

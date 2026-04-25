@@ -21,15 +21,15 @@ use crate::domain::{
 
 pub fn resolve_builtin_sources(custom_roots: Vec<String>) -> Vec<SourceRecord> {
     let mut sources = vec![
-        builtin_source("Codex Skills", ToolKind::Codex, "~/.codex/skills"),
-        builtin_source(
+        builtin_source("Codex Skills", ToolKind::Codex),
+        builtin_source_with_override(
             "Codex Superpowers",
             ToolKind::Codex,
-            "~/.codex/superpowers/skills",
+            Some("~/.codex/superpowers/skills"),
         ),
-        builtin_source("Claude Skills", ToolKind::Claude, "~/.claude/skills"),
-        builtin_source("Gemini Skills", ToolKind::Gemini, "~/.gemini/skills"),
-        builtin_source("OpenCode Skills", ToolKind::Opencode, "~/.opencode/skills"),
+        builtin_source("Claude Skills", ToolKind::Claude),
+        builtin_source("Gemini Skills", ToolKind::Gemini),
+        builtin_source("OpenCode Skills", ToolKind::Opencode),
     ];
 
     sources.extend(custom_roots.into_iter().map(custom_source));
@@ -241,7 +241,7 @@ fn toggle_app_install_in_home(
     home_override: Option<&Path>,
 ) -> io::Result<()> {
     let target_root =
-        builtin_root_for_app(&request.target_app, home_override).ok_or_else(|| {
+        builtin_skill_root_for_app(&request.target_app, home_override).ok_or_else(|| {
             io::Error::new(
                 io::ErrorKind::InvalidInput,
                 "generic target app is unsupported",
@@ -294,21 +294,35 @@ fn check_installed_apps_in_env(
     let mut apps = std::collections::HashMap::new();
 
     let checks = [
-        ("codex", expand_home("~/.codex", home_override)),
-        ("claude", expand_home("~/.claude", home_override)),
-        ("gemini", expand_home("~/.gemini", home_override)),
-        ("opencode", expand_home("~/.opencode", home_override)),
+        ("codex", ToolKind::Codex),
+        ("claude", ToolKind::Claude),
+        ("gemini", ToolKind::Gemini),
+        ("opencode", ToolKind::Opencode),
     ];
 
-    for (app, root) in checks {
-        apps.insert(app.into(), Path::new(&root).exists());
+    for (app, tool_kind) in checks {
+        let installed = builtin_app_roots_for_app(&tool_kind, home_override)
+            .into_iter()
+            .any(|root| Path::new(&root).exists());
+        apps.insert(app.into(), installed);
     }
 
     apps
 }
 
-fn builtin_source(name: &str, tool_kind: ToolKind, path: &str) -> SourceRecord {
-    let root_path = expand_home(path, None);
+fn builtin_source(name: &str, tool_kind: ToolKind) -> SourceRecord {
+    builtin_source_with_override(name, tool_kind, None)
+}
+
+fn builtin_source_with_override(
+    name: &str,
+    tool_kind: ToolKind,
+    path_override: Option<&str>,
+) -> SourceRecord {
+    let root_path = path_override
+        .map(|path| expand_home(path, None))
+        .or_else(|| builtin_skill_root_for_app(&tool_kind, None))
+        .unwrap_or_default();
     let status = classify_source_root(Path::new(&root_path));
 
     SourceRecord {
@@ -322,14 +336,71 @@ fn builtin_source(name: &str, tool_kind: ToolKind, path: &str) -> SourceRecord {
     }
 }
 
-fn builtin_root_for_app(tool_kind: &ToolKind, home_override: Option<&Path>) -> Option<String> {
-    match tool_kind {
-        ToolKind::Codex => Some(expand_home("~/.codex/skills", home_override)),
-        ToolKind::Claude => Some(expand_home("~/.claude/skills", home_override)),
-        ToolKind::Gemini => Some(expand_home("~/.gemini/skills", home_override)),
-        ToolKind::Opencode => Some(expand_home("~/.opencode/skills", home_override)),
-        ToolKind::Generic => None,
+fn builtin_skill_root_for_app(tool_kind: &ToolKind, home_override: Option<&Path>) -> Option<String> {
+    builtin_skill_root_for_app_for_os(tool_kind, home_override, env::consts::OS)
+}
+
+fn builtin_skill_root_for_app_for_os(
+    tool_kind: &ToolKind,
+    home_override: Option<&Path>,
+    os: &str,
+) -> Option<String> {
+    prefer_existing_path(
+        builtin_app_roots_for_app_for_os(tool_kind, home_override, os)
+            .into_iter()
+            .map(|root| Path::new(&root).join("skills").display().to_string())
+            .collect(),
+    )
+}
+
+fn builtin_app_roots_for_app(tool_kind: &ToolKind, home_override: Option<&Path>) -> Vec<String> {
+    builtin_app_roots_for_app_for_os(tool_kind, home_override, env::consts::OS)
+}
+
+fn builtin_app_roots_for_app_for_os(
+    tool_kind: &ToolKind,
+    home_override: Option<&Path>,
+    os: &str,
+) -> Vec<String> {
+    let roots = match tool_kind {
+        ToolKind::Codex => vec![expand_home("~/.codex", home_override)],
+        ToolKind::Claude => vec![expand_home("~/.claude", home_override)],
+        ToolKind::Gemini => vec![expand_home("~/.gemini", home_override)],
+        ToolKind::Opencode => opencode_app_roots(home_override, os),
+        ToolKind::Generic => Vec::new(),
+    };
+
+    dedupe_paths(roots)
+}
+
+fn opencode_app_roots(home_override: Option<&Path>, os: &str) -> Vec<String> {
+    match os {
+        "windows" | "linux" => vec![
+            expand_home("~/.config/opencode", home_override),
+            expand_home("~/.opencode", home_override),
+        ],
+        _ => vec![expand_home("~/.opencode", home_override)],
     }
+}
+
+fn prefer_existing_path(candidates: Vec<String>) -> Option<String> {
+    candidates
+        .iter()
+        .find(|candidate| Path::new(candidate.as_str()).exists())
+        .cloned()
+        .or_else(|| candidates.into_iter().next())
+}
+
+fn dedupe_paths(paths: Vec<String>) -> Vec<String> {
+    let mut unique = Vec::new();
+
+    for path in paths {
+        if !unique.contains(&path) {
+            unique.push(path);
+        }
+    }
+
+    unique
 }
 
 fn custom_source(root_path: String) -> SourceRecord {
@@ -721,8 +792,9 @@ mod tests {
     };
 
     use super::{
-        check_installed_apps_in_env, export_skills_zip, import_skills_zip, resolve_builtin_sources,
-        scan_source, toggle_app_install_in_home, toggle_app_installs_in_home,
+        builtin_skill_root_for_app_for_os, check_installed_apps_in_env, export_skills_zip,
+        import_skills_zip, resolve_builtin_sources, scan_source, toggle_app_install_in_home,
+        toggle_app_installs_in_home,
     };
 
     #[test]
@@ -918,6 +990,25 @@ mod tests {
         assert_eq!(installed.get("claude"), Some(&true));
         assert_eq!(installed.get("gemini"), Some(&true));
         assert_eq!(installed.get("opencode"), Some(&false));
+    }
+
+    #[test]
+    fn prefers_existing_opencode_config_root_for_skill_installation() {
+        let temp = tempdir().unwrap();
+        let opencode_root = temp.path().join(".config/opencode");
+        fs::create_dir_all(opencode_root.join("skills")).unwrap();
+
+        let resolved = builtin_skill_root_for_app_for_os(
+            &ToolKind::Opencode,
+            Some(temp.path()),
+            "windows",
+        )
+        .unwrap();
+
+        assert_eq!(
+            resolved,
+            opencode_root.join("skills").display().to_string()
+        );
     }
 
     #[test]

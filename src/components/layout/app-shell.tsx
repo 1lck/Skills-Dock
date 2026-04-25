@@ -57,6 +57,7 @@ interface AppShellProps {
   onClearSelection: () => void;
   onBatchApply: (app: AppKind, enabled: boolean) => void;
   onOpenPath: (path: string) => void;
+  onBrowseSource: (source: SourceRecord, log?: boolean) => void;
   onToggleApp: (skillId: string, app: AppKind, enabled: boolean) => void;
   onGenerateAiSummary?: () => void;
   onGenerateAiSummaryWithProvider?: (provider: AiSummaryProvider) => void;
@@ -104,6 +105,7 @@ export function AppShell({
   onClearSelection,
   onBatchApply,
   onOpenPath,
+  onBrowseSource,
   onToggleApp,
   onGenerateAiSummary,
   onGenerateAiSummaryWithProvider,
@@ -284,7 +286,7 @@ export function AppShell({
           ) : null}
 
           {activeView === "settings" ? (
-            <SettingsView sources={sources} onRefresh={onRefresh} />
+            <SettingsView onBrowseSource={onBrowseSource} sources={sources} onRefresh={onRefresh} />
           ) : null}
         </section>
       </div>
@@ -475,11 +477,19 @@ function UsageView({ skills, usageMap }: { skills: AggregatedInstalledSkill[]; u
   );
 }
 
-function SettingsView({ sources, onRefresh }: { sources: SourceRecord[]; onRefresh: () => void }) {
+function SettingsView({
+  sources,
+  onRefresh,
+  onBrowseSource,
+}: {
+  sources: SourceRecord[];
+  onRefresh: () => void;
+  onBrowseSource: (source: SourceRecord, log?: boolean) => void;
+}) {
   return (
     <>
       <PageTitle title="设置" subtitle="配置扫描、解析与校验等偏好设置。" action={<div className="header-actions"><button className="ghost-button" onClick={onRefresh} type="button"><RefreshCw size={17} />立即重新扫描</button><button className="ghost-button" type="button">恢复默认</button><button className="primary-button" type="button">保存设置</button></div>} />
-      <section className="settings-page-grid"><article className="dashboard-card"><h3>默认 Skill 扫描目录</h3><p className="panel-subtitle">配置各应用的默认扫描目录，系统将自动扫描这些目录下的 Skill。</p><SourceSettingsRows sources={sources} /></article><article className="dashboard-card"><h3>会话日志解析</h3><p className="panel-subtitle">配置各应用会话日志来源，用于提取使用记录与调用统计。</p><SourceSettingsRows sources={sources.slice(0, 4)} log /></article><article className="dashboard-card"><h3>自定义 Skill 文件夹</h3><MiniRows rows={["~/Projects/company-skills", "~/Documents/skills-templates", "/Users/shared/skills"]} /></article><article className="dashboard-card"><h3>校验偏好</h3><ToggleRows rows={["严格校验", "导入时自动校验", "显示内容差异"]} /></article><article className="dashboard-card"><h3>自动扫描</h3><ToggleRows rows={["应用启动时扫描", "文件变更时监控", "定时自动扫描"]} /></article><article className="dashboard-card"><h3>其他</h3><ToggleRows rows={["扫描完成后发送通知", "保留扫描历史"]} /></article></section>
+      <section className="settings-page-grid"><article className="dashboard-card"><h3>默认 Skill 扫描目录</h3><p className="panel-subtitle">配置各应用的默认扫描目录，系统将自动扫描这些目录下的 Skill。</p><SourceSettingsRows onBrowseSource={onBrowseSource} sources={sources} /></article><article className="dashboard-card"><h3>会话日志解析</h3><p className="panel-subtitle">配置各应用会话日志来源，用于提取使用记录与调用统计。</p><SourceSettingsRows log onBrowseSource={onBrowseSource} sources={sources.slice(0, 4)} /></article><article className="dashboard-card"><h3>自定义 Skill 文件夹</h3><MiniRows rows={["~/Projects/company-skills", "~/Documents/skills-templates", "/Users/shared/skills"]} /></article><article className="dashboard-card"><h3>校验偏好</h3><ToggleRows rows={["严格校验", "导入时自动校验", "显示内容差异"]} /></article><article className="dashboard-card"><h3>自动扫描</h3><ToggleRows rows={["应用启动时扫描", "文件变更时监控", "定时自动扫描"]} /></article><article className="dashboard-card"><h3>其他</h3><ToggleRows rows={["扫描完成后发送通知", "保留扫描历史"]} /></article></section>
     </>
   );
 }
@@ -579,9 +589,17 @@ function CheckOption({ label, checked }: { label: string; checked: boolean }) {
   return <label className="check-option"><input checked={checked} readOnly type="checkbox" /> <span>{label}</span></label>;
 }
 
-function SourceSettingsRows({ sources, log = false }: { sources: SourceRecord[]; log?: boolean }) {
+function SourceSettingsRows({
+  sources,
+  log = false,
+  onBrowseSource,
+}: {
+  sources: SourceRecord[];
+  log?: boolean;
+  onBrowseSource: (source: SourceRecord, log?: boolean) => void;
+}) {
   const fallback = sources.length ? sources : [];
-  return <div className="source-settings-rows">{fallback.map((source) => <div key={source.id}><strong>{source.name.replace(' Skills', '')}</strong><span>{log ? source.rootPath.replace('/skills', '/logs') : source.rootPath}</span><button className="ghost-button" type="button">浏览</button><em>已扫描</em></div>)}</div>;
+  return <div className="source-settings-rows">{fallback.map((source) => <div key={source.id}><strong>{source.name.replace(' Skills', '')}</strong><span>{log ? source.rootPath.replace(/[/\\]skills$/u, "/logs") : source.rootPath}</span><button aria-label={`浏览 ${source.name}`} className="ghost-button" onClick={() => onBrowseSource(source, log)} type="button">浏览</button><em>已扫描</em></div>)}</div>;
 }
 
 function ToggleRows({ rows }: { rows: string[] }) {
