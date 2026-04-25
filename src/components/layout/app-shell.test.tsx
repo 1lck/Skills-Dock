@@ -1,6 +1,6 @@
 import type { ComponentProps } from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import { aggregateInstalledSkills } from "../../lib/application/skills-catalog";
 import type { SkillDetail, SourceRecord } from "../../lib/models/skill";
@@ -93,6 +93,18 @@ function renderShell(overrides: Partial<ComponentProps<typeof AppShell>> = {}) {
 }
 
 describe("AppShell", () => {
+  beforeEach(() => {
+    window.location.hash = "#skills";
+  });
+
+  test("opens overview when no hash is present", () => {
+    window.location.hash = "";
+    renderShell();
+
+    expect(screen.getByRole("heading", { name: "概览" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "概览" })).toHaveClass("is-active");
+  });
+
   test("renders skills region and no detail when no skill selected", () => {
     renderShell();
 
@@ -135,50 +147,17 @@ describe("AppShell", () => {
     expect(onToggleApp).toHaveBeenCalledWith("frontend-skill", "claude", true);
   });
 
-  test("filters skills when clicking a top app summary chip", () => {
-    const onSelectToolKind = vi.fn();
-
-    renderShell({ onSelectToolKind, selectedSkill: skills[0] });
-
-    fireEvent.click(screen.getByRole("button", { name: "按 Claude 筛选" }));
-
-    expect(onSelectToolKind).toHaveBeenCalledWith("claude");
-  });
-
-  test("keeps top app counts independent from the filtered list count", () => {
+  test("keeps top app counts in metric cards without rendering app filter chips", () => {
     renderShell({
       appCounts: { claude: 11, codex: 26, gemini: 0, opencode: 0 },
       selectedSkill: skills[0],
       selectedToolKind: "codex",
     });
 
-    expect(screen.getByRole("button", { name: "按 Codex 筛选" })).toHaveTextContent(
-      "Codex: 26",
-    );
+    expect(screen.queryByRole("button", { name: "按 Codex 筛选" })).toBeNull();
+    expect(screen.getByText("已安装到 Codex")).toBeVisible();
+    expect(screen.getByText("26")).toBeVisible();
     expect(screen.getByText("1")).toBeVisible();
-  });
-
-  test("disables top app chips for apps that are not installed locally", () => {
-    const onSelectToolKind = vi.fn();
-
-    renderShell({
-      onSelectToolKind,
-      selectedSkill: skills[0],
-      installedApps: { ...installedApps, gemini: false, opencode: false },
-    });
-
-    const geminiChip = screen.getByRole("button", { name: "按 Gemini 筛选" });
-    const opencodeChip = screen.getByRole("button", { name: "按 OpenCode 筛选" });
-
-    expect(geminiChip).toBeDisabled();
-    expect(opencodeChip).toBeDisabled();
-    expect(screen.getByText("未安装 Gemini，无法筛选")).toBeInTheDocument();
-    expect(screen.getByText("未安装 OpenCode，无法筛选")).toBeInTheDocument();
-
-    fireEvent.click(geminiChip);
-    fireEvent.click(opencodeChip);
-
-    expect(onSelectToolKind).not.toHaveBeenCalled();
   });
 
   test("opens top filters and forwards installation state selection", () => {

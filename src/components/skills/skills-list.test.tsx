@@ -1,20 +1,11 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, test, vi } from "vitest";
 
-import type { AggregatedInstalledSkill, SourceRecord } from "../../lib/models/skill";
+import type { AggregatedInstalledSkill } from "../../lib/models/skill";
 import { SkillsList } from "./skills-list";
 
-const sources: SourceRecord[] = [
-  {
-    id: "codex::/users/lick/.codex/skills",
-    name: "Codex Skills",
-    toolKind: "codex",
-    sourceType: "builtin",
-    rootPath: "/Users/lick/.codex/skills",
-    status: "ready",
-    lastIndexedAt: "2026-04-20T12:00:00.000Z",
-  },
-];
+const sourceId = "codex::/users/lick/.codex/skills";
+const sourceRootPath = "/Users/lick/.codex/skills";
 const installedApps = {
   claude: true,
   codex: true,
@@ -35,8 +26,8 @@ const skill: AggregatedInstalledSkill = {
     {
       id: "frontend",
       toolKind: "codex",
-      sourceId: sources[0].id,
-      sourcePath: sources[0].rootPath,
+      sourceId,
+      sourcePath: sourceRootPath,
       skillPath: "/Users/lick/.codex/skills/frontend-skill",
       skillFilePath: "/Users/lick/.codex/skills/frontend-skill/SKILL.md",
       status: "valid",
@@ -55,7 +46,6 @@ describe("SkillsList", () => {
     render(
       <SkillsList
         skills={[skill]}
-        sources={sources}
         loading={false}
         selectedSkillId={skill.id}
         selectedSkillIds={[]}
@@ -85,7 +75,6 @@ describe("SkillsList", () => {
     render(
       <SkillsList
         skills={[skill]}
-        sources={sources}
         loading={false}
         selectedSkillId={skill.id}
         selectedSkillIds={[skill.id]}
