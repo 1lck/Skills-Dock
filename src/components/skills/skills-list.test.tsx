@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, test, vi } from "vitest";
 
-import type { AggregatedInstalledSkill } from "../../lib/models/skill";
+import type { AggregatedInstalledSkill, SkillBundle } from "../../lib/models/skill";
 import { SkillsList } from "./skills-list";
 
 const sourceId = "codex::/users/lick/.codex/skills";
@@ -39,15 +39,63 @@ const skill: AggregatedInstalledSkill = {
   primaryInstallation: null,
 };
 
+const bundle: SkillBundle = {
+  id: "frontend-bundle",
+  canonicalId: "frontend-bundle",
+  name: "Frontend Bundle",
+  groupingKind: "source-root",
+  originType: "source",
+  syncStatus: "unmanaged",
+  status: "valid",
+  installationState: "ready",
+  preview: "Two frontend helpers for UI work.",
+  updatedAt: "2026-04-20T12:00:00.000Z",
+  apps: { claude: false, codex: true, gemini: false, opencode: false },
+  desiredApps: { claude: false, codex: false, gemini: false, opencode: false },
+  sourceIds: [sourceId],
+  sourcePaths: [sourceRootPath],
+  memberCount: 1,
+  usageCount: 0,
+  missingMemberSkillIds: [],
+  lastSyncedAt: null,
+  lastRepairedAt: null,
+  members: [skill],
+  primarySkill: skill,
+};
+
 describe("SkillsList", () => {
+  test("renders bundle rows with member counts", () => {
+    render(
+      <SkillsList
+        skills={[bundle]}
+        loading={false}
+        selectedSkillId={bundle.id}
+        selectedSkillIds={[]}
+        batchBusy={false}
+        usageMap={{}}
+        installedApps={installedApps}
+        onSelectSkill={vi.fn()}
+        onToggleSkillSelection={vi.fn()}
+        onToggleSelectAllVisible={vi.fn()}
+        onCreateBundle={vi.fn()}
+        onClearSelection={vi.fn()}
+        onBatchApply={vi.fn()}
+        onToggleApp={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Frontend Bundle" })).toBeVisible();
+    expect(screen.getByText("1 个成员")).toBeVisible();
+  });
+
   test("disables app toggle buttons for apps that are not installed locally", () => {
     const onToggleApp = vi.fn();
 
     render(
       <SkillsList
-        skills={[skill]}
+        skills={[bundle]}
         loading={false}
-        selectedSkillId={skill.id}
+        selectedSkillId={bundle.id}
         selectedSkillIds={[]}
         batchBusy={false}
         usageMap={{}}
@@ -55,6 +103,7 @@ describe("SkillsList", () => {
         onSelectSkill={vi.fn()}
         onToggleSkillSelection={vi.fn()}
         onToggleSelectAllVisible={vi.fn()}
+        onCreateBundle={vi.fn()}
         onClearSelection={vi.fn()}
         onBatchApply={vi.fn()}
         onToggleApp={onToggleApp}
@@ -74,26 +123,54 @@ describe("SkillsList", () => {
 
     render(
       <SkillsList
-        skills={[skill]}
+        skills={[bundle]}
         loading={false}
-        selectedSkillId={skill.id}
-        selectedSkillIds={[skill.id]}
+        selectedSkillId={bundle.id}
+        selectedSkillIds={[bundle.id]}
         batchBusy={false}
         usageMap={{}}
         installedApps={installedApps}
         onSelectSkill={vi.fn()}
         onToggleSkillSelection={onToggleSkillSelection}
         onToggleSelectAllVisible={vi.fn()}
+        onCreateBundle={vi.fn()}
         onClearSelection={vi.fn()}
         onBatchApply={onBatchApply}
         onToggleApp={vi.fn()}
       />,
     );
 
-    fireEvent.click(screen.getByRole("checkbox", { name: "选择 Frontend Skill" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "选择 Frontend Bundle" }));
     fireEvent.click(screen.getByRole("button", { name: "批量安装到 Claude" }));
 
     expect(onToggleSkillSelection).toHaveBeenCalledWith(skill.id);
     expect(onBatchApply).toHaveBeenCalledWith("claude", true);
+  });
+
+  test("creates a local bundle from selected rows", () => {
+    const onCreateBundle = vi.fn();
+
+    render(
+      <SkillsList
+        skills={[bundle]}
+        loading={false}
+        selectedSkillId={bundle.id}
+        selectedSkillIds={[bundle.id]}
+        batchBusy={false}
+        usageMap={{}}
+        installedApps={installedApps}
+        onSelectSkill={vi.fn()}
+        onToggleSkillSelection={vi.fn()}
+        onToggleSelectAllVisible={vi.fn()}
+        onCreateBundle={onCreateBundle}
+        onClearSelection={vi.fn()}
+        onBatchApply={vi.fn()}
+        onToggleApp={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "整合为本地包" }));
+
+    expect(onCreateBundle).toHaveBeenCalled();
   });
 });

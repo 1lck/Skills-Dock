@@ -5,8 +5,12 @@ import { useEffect, useState } from "react";
 import {
   aggregateInstalledSkills,
   countInstalledApps,
-  sortInstalledSkills,
 } from "../lib/application/skills-catalog";
+import {
+  getSourceIdsForToolKinds,
+  mergePartialSnapshot,
+} from "../lib/application/skills-refresh";
+import { aggregateSkillBundles } from "../lib/application/skill-bundles";
 import { buildDemoSnapshot } from "../lib/fixtures/demo-snapshot";
 import type {
   AiSummaryProvider,
@@ -14,9 +18,9 @@ import type {
   AiSummaryState,
 } from "../lib/models/ai-summary";
 import type {
-  AggregatedInstalledSkill,
   AppKind,
   InstallationState,
+  SkillBundle,
   SkillDetail,
   SkillSnapshot,
   SourceInput,
@@ -26,8 +30,12 @@ import type {
 import { makeSourceId } from "../lib/models/skill";
 import {
   addCustomSource,
+  emptyDesiredApps,
+  createCustomBundleDefinition,
   loadCustomSources,
+  loadCustomBundles,
   loadSourceOverrides,
+  saveCustomBundles,
   saveCustomSources,
   saveSourceOverrides,
   type SourceOverrides,
@@ -43,6 +51,12 @@ interface ImportSkillsZipResult {
 interface ExportSkillsZipResult {
   outputPath: string;
   exportedSkillCount: number;
+}
+
+interface RefreshOptions {
+  customRootsOverride?: string[];
+  sourceIds?: string[];
+  includeUsage?: boolean;
 }
 
 function isTauriRuntime(): boolean {
@@ -113,10 +127,27 @@ export function useSkillsDock() {
   const [installedApps, setInstalledApps] = useState<Record<string, boolean>>({});
   const [selectedSkillAiSummary, setSelectedSkillAiSummary] = useState<AiSummaryState | null>(null);
   const [selectedAiProvider, setSelectedAiProvider] = useState<AiSummaryProvider | null>(null);
+  const [customBundles, setCustomBundles] = useState(() =>
+    loadCustomBundles(storage),
+  );
 
-  async function refresh(customRootsOverride?: string[]) {
+  function persistCustomBundles(nextBundles: ReturnType<typeof loadCustomBundles>) {
+    saveCustomBundles(storage, nextBundles);
+    setCustomBundles(nextBundles);
+  }
+
+  async function refreshUsage() {
+    if (demoMode) {
+      return;
+    }
+
+    const scanned = await invoke<SkillUsageMap>("scan_skill_usage");
+    setUsageMap(scanned);
+  }
+
+  async function refresh(options: RefreshOptions = {}) {
     setLoading(true);
-    const customRoots = customRootsOverride ?? loadCustomSources(storage);
+    const customRoots = options.customRootsOverride ?? loadCustomSources(storage);
 
     let snapshot: SkillSnapshot;
     if (!demoMode) {
@@ -127,8 +158,12 @@ export function useSkillsDock() {
         resolvedSources,
         loadSourceOverrides(storage),
       );
+      const scanTargets = options.sourceIds?.length
+        ? sourcesToScan.filter((source) => options.sourceIds?.includes(source.id))
+        : sourcesToScan;
+
       snapshot = await invoke<SkillSnapshot>("scan_sources", {
-        sources: sourcesToScan.map(toSourceInput),
+        sources: scanTargets.map(toSourceInput),
       });
       
       const appsInstalled = await invoke<Record<string, boolean>>("get_installed_apps");
@@ -138,11 +173,17 @@ export function useSkillsDock() {
       setInstalledApps({ codex: true, claude: true, gemini: true, opencode: true });
     }
 
-    setSources(snapshot.sources);
-    setAllSkills(snapshot.skills);
+    if (!demoMode && options.sourceIds?.length) {
+      const merged = mergePartialSnapshot(sources, allSkills, snapshot);
+      setSources(merged.sources);
+      setAllSkills(merged.skills);
+    } else {
+      setSources(snapshot.sources);
+      setAllSkills(snapshot.skills);
+    }
 
-    // 扫描 Claude / Codex / Gemini / OpenCode 的本地会话记录，获取真实调用次数
-    if (!demoMode) {
+    // 使用记录扫描改为按需触发，避免安装/同步动作带来高 CPU 开销
+    if (!demoMode && options.includeUsage === true) {
       const scanned = await invoke<SkillUsageMap>("scan_skill_usage");
       setUsageMap(scanned);
     }
@@ -151,14 +192,20 @@ export function useSkillsDock() {
   }
 
   useEffect(() => {
-    void refresh();
+    void refresh({ includeUsage: false });
   }, []);
 
   const aggregatedSkills = aggregateInstalledSkills(allSkills);
+  const aggregatedBundles = aggregateSkillBundles(
+    aggregatedSkills,
+    sources,
+    usageMap,
+    customBundles,
+  );
   const appCounts = countInstalledApps(aggregatedSkills);
   const sourcesById = new Map(sources.map((source) => [source.id, source]));
 
-  const filteredSkills = aggregatedSkills.filter((skill) => {
+  const filteredSkills = aggregatedBundles.filter((skill) => {
     if (
       selectedInstallationState !== "all" &&
       skill.installationState !== selectedInstallationState
@@ -168,14 +215,22 @@ export function useSkillsDock() {
 
     if (
       selectedToolKind !== "all" &&
-      !skill.installations.some((installation) => installation.toolKind === selectedToolKind)
+      !skill.members.some((member) =>
+        member.installations.some(
+          (installation) => installation.toolKind === selectedToolKind,
+        ),
+      )
     ) {
       return false;
     }
 
     if (
       selectedSourceId !== "all" &&
-      !skill.installations.some((installation) => installation.sourceId === selectedSourceId)
+      !skill.members.some((member) =>
+        member.installations.some(
+          (installation) => installation.sourceId === selectedSourceId,
+        ),
+      )
     ) {
       return false;
     }
@@ -188,18 +243,25 @@ export function useSkillsDock() {
     return [
       skill.name,
       skill.preview,
-      ...skill.installations.flatMap((installation) => [
-        sourcesById.get(installation.sourceId)?.name ?? "",
-        installation.skillPath,
+      ...skill.members.flatMap((member) => [
+        member.name,
+        member.preview,
+        ...member.installations.flatMap((installation) => [
+          sourcesById.get(installation.sourceId)?.name ?? "",
+          installation.skillPath,
+        ]),
       ]),
     ].some((value) => value.toLowerCase().includes(query));
   });
-  const sortedSkills = sortInstalledSkills(filteredSkills, usageMap);
+  const sortedSkills = filteredSkills;
   const selectedSkill =
     sortedSkills.find((skill) => skill.id === selectedSkillId) ?? null;
   const selectedSkillSummaryRequest = selectedSkill
     ? toAiSummaryRequest(selectedSkill, selectedAiProvider)
     : null;
+  const availableMemberSkills = aggregatedSkills
+    .slice()
+    .sort((left, right) => left.name.localeCompare(right.name));
 
   useEffect(() => {
     if (sortedSkills.length === 0) {
@@ -287,7 +349,7 @@ export function useSkillsDock() {
 
     const nextRoots = addCustomSource(loadCustomSources(storage), selected);
     saveCustomSources(storage, nextRoots);
-    await refresh(nextRoots);
+    await refresh({ customRootsOverride: nextRoots });
   }
 
   async function importFromZip() {
@@ -326,7 +388,7 @@ export function useSkillsDock() {
 
       const nextRoots = addCustomSource(loadCustomSources(storage), selectedTarget);
       saveCustomSources(storage, nextRoots);
-      await refresh(nextRoots);
+      await refresh({ customRootsOverride: nextRoots });
       await message(
         `已导入 ${result.importedSkillPaths.length} 个 Skills 到：\n${result.targetRoot}`,
         {
@@ -386,37 +448,47 @@ export function useSkillsDock() {
 
 
   async function toggleApp(skillId: string, app: AppKind, enabled: boolean) {
-    const aggregated = aggregateInstalledSkills(allSkills);
-    const skill = aggregated.find((entry) => entry.canonicalId === skillId);
-    const sourcePath =
-      skill?.primaryInstallation?.skillPath ??
-      skill?.installations[0]?.skillPath;
-
-    if (!sourcePath) {
+    const bundle = sortedSkills.find((entry) => entry.id === skillId);
+    if (!bundle) {
       return;
     }
 
     if (demoMode) {
-      setAllSkills((current) =>
-        current.map((s) => {
-          if (s.id === skillId || s.sourcePath === sourcePath) {
-            return { ...s };
-          }
-          return s;
-        }),
-      );
       return;
     }
 
-    await invoke("toggle_app_install", {
-      request: {
-        skillId,
-        sourceSkillPath: sourcePath,
-        targetApp: app,
-        enabled,
-      },
+    const requests = bundle.members
+      .map((member) => {
+        const sourceSkillPath =
+          member.primaryInstallation?.skillPath ??
+          member.installations[0]?.skillPath;
+
+        if (!sourceSkillPath) {
+          return null;
+        }
+
+        return {
+          skillId: member.canonicalId,
+          sourceSkillPath,
+          targetApp: app,
+          enabled,
+        };
+      })
+      .filter((request): request is NonNullable<typeof request> => request !== null);
+
+    if (requests.length === 0) {
+      return;
+    }
+
+    if (requests.length === 1) {
+      await invoke("toggle_app_install", { request: requests[0] });
+    } else {
+      await invoke("toggle_app_installs", { requests });
+    }
+    await refresh({
+      sourceIds: getSourceIdsForToolKinds(sources, [app]),
+      includeUsage: false,
     });
-    await refresh();
   }
 
   async function exportSelectedSkills() {
@@ -426,19 +498,22 @@ export function useSkillsDock() {
 
     const skills = sortedSkills
       .filter((skill) => selectedSkillIds.includes(skill.id))
-      .map((skill) => {
-        const sourceSkillPath =
-          skill.primaryInstallation?.skillPath ?? skill.installations[0]?.skillPath;
+      .flatMap((bundle) =>
+        bundle.members.map((member) => {
+          const sourceSkillPath =
+            member.primaryInstallation?.skillPath ??
+            member.installations[0]?.skillPath;
 
-        if (!sourceSkillPath) {
-          return null;
-        }
+          if (!sourceSkillPath) {
+            return null;
+          }
 
-        return {
-          skillId: skill.canonicalId,
-          sourceSkillPath,
-        };
-      })
+          return {
+            skillId: member.canonicalId,
+            sourceSkillPath,
+          };
+        }),
+      )
       .filter((entry): entry is NonNullable<typeof entry> => entry !== null);
 
     if (skills.length === 0) {
@@ -530,6 +605,218 @@ export function useSkillsDock() {
     setSelectedSkillIds(filteredSkills.map((skill) => skill.id));
   }
 
+  function createLocalBundle() {
+    const selectedBundles = sortedSkills.filter((skill) =>
+      selectedSkillIds.includes(skill.id),
+    );
+    if (selectedBundles.length === 0) {
+      return;
+    }
+
+    const memberSkillIds = [...new Set(
+      selectedBundles.flatMap((bundle) =>
+        bundle.members.map((member) => member.canonicalId),
+      ),
+    )];
+    if (memberSkillIds.length === 0) {
+      return;
+    }
+
+    const nextBundle = createCustomBundleDefinition(
+      `My Bundle ${customBundles.length + 1}`,
+      memberSkillIds,
+    );
+    const nextBundles = [...customBundles, nextBundle];
+    persistCustomBundles(nextBundles);
+    setSelectedSkillId(nextBundle.id);
+    setSelectedSkillIds([nextBundle.id]);
+  }
+
+  function renameLocalBundle(bundleId: string, name: string) {
+    const trimmed = name.trim();
+    if (!trimmed) {
+      return;
+    }
+
+    persistCustomBundles(
+      customBundles.map((bundle) =>
+        bundle.id === bundleId
+          ? { ...bundle, name: trimmed, updatedAt: new Date().toISOString() }
+          : bundle,
+      ),
+    );
+  }
+
+  function deleteLocalBundle(bundleId: string) {
+    persistCustomBundles(customBundles.filter((bundle) => bundle.id !== bundleId));
+    if (selectedSkillId === bundleId) {
+      setSelectedSkillId(null);
+    }
+    setSelectedSkillIds((current) => current.filter((id) => id !== bundleId));
+  }
+
+  function toggleBundleMember(bundleId: string, memberId: string) {
+    persistCustomBundles(
+      customBundles.map((bundle) => {
+        if (bundle.id !== bundleId) {
+          return bundle;
+        }
+
+        const nextMemberIds = bundle.memberSkillIds.includes(memberId)
+          ? bundle.memberSkillIds.filter((id) => id !== memberId)
+          : [...bundle.memberSkillIds, memberId];
+
+        if (nextMemberIds.length === 0) {
+          return bundle;
+        }
+
+        return {
+          ...bundle,
+          memberSkillIds: nextMemberIds,
+          updatedAt: new Date().toISOString(),
+        };
+      }),
+    );
+  }
+
+  function setBundleDesiredApp(bundleId: string, app: AppKind, enabled: boolean) {
+    persistCustomBundles(
+      customBundles.map((bundle) =>
+        bundle.id === bundleId
+          ? {
+              ...bundle,
+              desiredApps: {
+                ...(bundle.desiredApps ?? emptyDesiredApps()),
+                [app]: enabled,
+              },
+              updatedAt: new Date().toISOString(),
+            }
+          : bundle,
+      ),
+    );
+  }
+
+  async function syncBundle(bundleId: string) {
+    const bundle = sortedSkills.find((entry) => entry.id === bundleId);
+    const bundleState = customBundles.find((entry) => entry.id === bundleId);
+    if (!bundle || !bundleState) {
+      return;
+    }
+
+    const requests = Object.entries(bundleState.desiredApps)
+      .flatMap(([app, enabled]) => {
+        if (!enabled) {
+          return [];
+        }
+
+        return bundle.members.flatMap((member) => {
+          if (member.apps[app as AppKind]) {
+            return [];
+          }
+
+          const sourceSkillPath =
+            member.primaryInstallation?.skillPath ??
+            member.installations[0]?.skillPath;
+          if (!sourceSkillPath) {
+            return [];
+          }
+
+          return [
+            {
+              skillId: member.canonicalId,
+              sourceSkillPath,
+              targetApp: app as AppKind,
+              enabled: true,
+            },
+          ];
+        });
+      });
+
+    if (!demoMode && requests.length > 0) {
+      await invoke("toggle_app_installs", { requests });
+      await refresh({
+        sourceIds: getSourceIdsForToolKinds(
+          sources,
+          Object.entries(bundleState.desiredApps)
+            .filter(([, enabled]) => enabled)
+            .map(([app]) => app as AppKind),
+        ),
+        includeUsage: false,
+      });
+    }
+
+    persistCustomBundles(
+      customBundles.map((entry) =>
+        entry.id === bundleId
+          ? {
+              ...entry,
+              lastSyncedAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            }
+          : entry,
+      ),
+    );
+  }
+
+  async function repairBundle(bundleId: string) {
+    const bundle = sortedSkills.find((entry) => entry.id === bundleId);
+    const bundleState = customBundles.find((entry) => entry.id === bundleId);
+    if (!bundle || !bundleState) {
+      return;
+    }
+
+    const requests = Object.entries(bundleState.desiredApps)
+      .flatMap(([app, enabled]) => {
+        if (!enabled) {
+          return [];
+        }
+
+        return bundle.members.flatMap((member) => {
+          const sourceSkillPath =
+            member.primaryInstallation?.skillPath ??
+            member.installations[0]?.skillPath;
+          if (!sourceSkillPath) {
+            return [];
+          }
+
+          return [
+            {
+              skillId: member.canonicalId,
+              sourceSkillPath,
+              targetApp: app as AppKind,
+              enabled: true,
+            },
+          ];
+        });
+      });
+
+    if (!demoMode && requests.length > 0) {
+      await invoke("toggle_app_installs", { requests });
+      await refresh({
+        sourceIds: getSourceIdsForToolKinds(
+          sources,
+          Object.entries(bundleState.desiredApps)
+            .filter(([, enabled]) => enabled)
+            .map(([app]) => app as AppKind),
+        ),
+        includeUsage: false,
+      });
+    }
+
+    persistCustomBundles(
+      customBundles.map((entry) =>
+        entry.id === bundleId
+          ? {
+              ...entry,
+              lastRepairedAt: new Date().toISOString(),
+              lastSyncedAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            }
+          : entry,
+      ),
+    );
+  }
+
   async function batchApply(app: AppKind, enabled: boolean) {
     if (demoMode) {
       return;
@@ -537,21 +824,24 @@ export function useSkillsDock() {
 
     const requests = sortedSkills
       .filter((skill) => selectedSkillIds.includes(skill.id))
-      .map((skill) => {
-        const sourceSkillPath =
-          skill.primaryInstallation?.skillPath ?? skill.installations[0]?.skillPath;
+      .flatMap((bundle) =>
+        bundle.members.map((member) => {
+          const sourceSkillPath =
+            member.primaryInstallation?.skillPath ??
+            member.installations[0]?.skillPath;
 
-        if (!sourceSkillPath) {
-          return null;
-        }
+          if (!sourceSkillPath) {
+            return null;
+          }
 
-        return {
-          skillId: skill.canonicalId,
-          sourceSkillPath,
-          targetApp: app,
-          enabled,
-        };
-      })
+          return {
+            skillId: member.canonicalId,
+            sourceSkillPath,
+            targetApp: app,
+            enabled,
+          };
+        }),
+      )
       .filter((request): request is NonNullable<typeof request> => request !== null);
 
     if (requests.length === 0) {
@@ -562,7 +852,10 @@ export function useSkillsDock() {
     try {
       await invoke("toggle_app_installs", { requests });
       setSelectedSkillIds([]);
-      await refresh();
+      await refresh({
+        sourceIds: getSourceIdsForToolKinds(sources, [app]),
+        includeUsage: false,
+      });
     } finally {
       setBatchBusy(false);
     }
@@ -575,6 +868,7 @@ export function useSkillsDock() {
     appCounts,
     batchBusy,
     usageMap,
+    availableMemberSkills,
     installedApps,
     selectedSkillAiSummary,
     selectedAiProvider,
@@ -592,9 +886,17 @@ export function useSkillsDock() {
     setSelectedSkillId,
     toggleSkillSelection,
     toggleSelectAllVisible,
+    createLocalBundle,
+    renameLocalBundle,
+    deleteLocalBundle,
+    toggleBundleMember,
+    setBundleDesiredApp,
+    syncBundle,
+    repairBundle,
     clearSelection: () => setSelectedSkillIds([]),
     batchApply,
     refresh,
+    refreshUsage,
     addFolder,
     importFromZip,
     exportSelectedSkills,
@@ -607,17 +909,17 @@ export function useSkillsDock() {
 }
 
 function toAiSummaryRequest(
-  skill: AggregatedInstalledSkill,
+  skill: SkillBundle,
   provider: AiSummaryProvider | null,
 ): AiSummaryRequest | null {
-  const content = skill.primaryInstallation?.content;
-  const contentHash = skill.primaryInstallation?.contentHash;
+  const content = skill.primarySkill?.primaryInstallation?.content;
+  const contentHash = skill.primarySkill?.primaryInstallation?.contentHash;
   if (!content || !contentHash) {
     return null;
   }
 
   return {
-    skillName: skill.name,
+    skillName: skill.primarySkill?.name ?? skill.name,
     contentHash,
     content,
     provider,

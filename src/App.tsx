@@ -56,6 +56,7 @@ function App() {
       onExportSelected={() => void skillsDock.exportSelectedSkills()}
       onOpenPath={(path) => void skillsDock.openPath(path)}
       onRefresh={() => void skillsDock.refresh()}
+      onRefreshUsage={() => void skillsDock.refreshUsage()}
       onSearchChange={skillsDock.setSearch}
       onSelectSkill={skillsDock.setSelectedSkillId}
       onSelectInstallationState={skillsDock.setSelectedInstallationState}
@@ -63,6 +64,7 @@ function App() {
       onSelectSource={skillsDock.setSelectedSourceId}
       onToggleSkillSelection={skillsDock.toggleSkillSelection}
       onToggleSelectAllVisible={skillsDock.toggleSelectAllVisible}
+      onCreateBundle={skillsDock.createLocalBundle}
       onClearSelection={skillsDock.clearSelection}
       onBatchApply={(app, enabled) => void skillsDock.batchApply(app, enabled)}
       onToggleApp={(skillId, app, enabled) =>
@@ -79,6 +81,7 @@ function App() {
       selectedSkillIds={skillsDock.selectedSkillIds}
       exportSelectionCount={skillsDock.selectedSkillIds.length}
       skills={skillsDock.skills}
+      availableSkills={skillsDock.availableMemberSkills}
       sources={skillsDock.sources}
       usageMap={skillsDock.usageMap}
       installedApps={skillsDock.installedApps}
@@ -88,6 +91,12 @@ function App() {
       onGenerateAiSummaryWithProvider={(provider) =>
         void skillsDock.generateAiSummaryWithProvider(provider)
       }
+      onRenameBundle={skillsDock.renameLocalBundle}
+      onDeleteBundle={skillsDock.deleteLocalBundle}
+      onToggleBundleMember={skillsDock.toggleBundleMember}
+      onSetBundleDesiredApp={skillsDock.setBundleDesiredApp}
+      onSyncBundle={(bundleId) => void skillsDock.syncBundle(bundleId)}
+      onRepairBundle={(bundleId) => void skillsDock.repairBundle(bundleId)}
     />
   );
 }

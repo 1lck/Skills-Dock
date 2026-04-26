@@ -14,15 +14,15 @@ import {
   XCircle,
 } from "lucide-react";
 import type {
-  AggregatedInstalledSkill,
   AppKind,
+  SkillBundle,
 } from "../../lib/models/skill";
 import type { SkillUsageMap } from "../../lib/storage/skill-usage";
 import { DisabledHint } from "../common/disabled-hint";
 import { AppLogo } from "../icons/app-logos";
 
 interface SkillsListProps {
-  skills: AggregatedInstalledSkill[];
+  skills: SkillBundle[];
   loading: boolean;
   selectedSkillId: string | null;
   selectedSkillIds: string[];
@@ -32,6 +32,7 @@ interface SkillsListProps {
   onSelectSkill: (skillId: string) => void;
   onToggleSkillSelection: (skillId: string) => void;
   onToggleSelectAllVisible: () => void;
+  onCreateBundle: () => void;
   onClearSelection: () => void;
   onBatchApply: (app: AppKind, enabled: boolean) => void;
   onToggleApp: (skillId: string, app: AppKind, enabled: boolean) => void;
@@ -57,6 +58,7 @@ export function SkillsList({
   onSelectSkill,
   onToggleSkillSelection,
   onToggleSelectAllVisible,
+  onCreateBundle,
   onClearSelection,
   onBatchApply,
   onToggleApp,
@@ -66,19 +68,19 @@ export function SkillsList({
   const selectedCount = selectedSkillIds.length;
 
   if (loading) {
-    return <section className="table-card"><p className="empty-state">正在扫描本机 Skills...</p></section>;
+    return <section className="table-card bundles-table-card"><p className="empty-state">正在扫描本机 Bundles...</p></section>;
   }
 
   if (skills.length === 0) {
-    return <section className="table-card"><p className="empty-state">没有找到匹配的 Skills。</p></section>;
+    return <section className="table-card bundles-table-card"><p className="empty-state">没有找到匹配的 Bundles。</p></section>;
   }
 
   return (
-    <section className="table-card" aria-label="Skills 列表">
+    <section className="table-card bundles-table-card" aria-label="Bundles 列表">
       <div className="table-actionbar">
         <label className="selection-summary">
           <input
-            aria-label="选择所有可见 Skills"
+            aria-label="选择所有可见 Bundles"
             checked={selectedCount > 0 && selectedCount === skills.length}
             onChange={onToggleSelectAllVisible}
             ref={(input) => {
@@ -92,6 +94,7 @@ export function SkillsList({
         </label>
         <div className="batch-actions">
           <button disabled={selectedCount === 0} onClick={onExportSelected} type="button"><Download size={16} />导出 ZIP{exportSelectionCount > 0 ? ` (${exportSelectionCount})` : ""}</button>
+          <button disabled={selectedCount === 0} onClick={onCreateBundle} type="button"><Settings size={16} />整合为本地包</button>
           <button disabled={selectedCount === 0 || batchBusy} onClick={() => onBatchApply("codex", true)} type="button"><Settings size={16} />安装到选中应用</button>
           <button disabled={selectedCount === 0} onClick={onClearSelection} type="button"><Trash2 size={16} />清除选择</button>
           <button type="button"><MoreHorizontal size={16} /></button>
@@ -103,7 +106,7 @@ export function SkillsList({
           <thead>
             <tr>
               <th aria-label="选择" />
-              <th>Skill 名称</th>
+              <th>Bundle 名称</th>
               <th>描述</th>
               <th>校验状态</th>
               <th colSpan={4}>安装状态</th>
@@ -127,10 +130,17 @@ export function SkillsList({
                   <td>
                     <button aria-label={skill.name} className="skill-name-button" onClick={() => onSelectSkill(skill.id)} type="button">
                       <SkillIcon name={skill.name} status={skill.status} />
-                      <span>{skill.name}</span>
+                      <span>
+                        {skill.name}
+                        <small>{skill.memberCount} 个成员</small>
+                        <small>{skill.originType === "custom" ? "本地整合包" : "来源包"} · {labelForSyncStatus(skill.syncStatus)}</small>
+                      </span>
                     </button>
                   </td>
-                  <td className="skill-description">{skill.preview || "暂无描述"}</td>
+                  <td className="skill-description">
+                    {skill.preview || "暂无描述"}
+                    <small>{skill.members.map((member) => member.name).join(" / ")}</small>
+                  </td>
                   <td><StatusBadge status={skill.status} /></td>
                   {appKinds.map((app) => (
                     <td key={app.key}>
@@ -156,7 +166,7 @@ export function SkillsList({
                       </DisabledHint>
                     </td>
                   ))}
-                  <td>{usageMap[skill.id]?.callCount ?? fallbackUsage(skill.name)}</td>
+                  <td>{skill.usageCount || usageMap[skill.id]?.callCount || fallbackUsage(skill.name)}</td>
                   <td>{formatUpdated(skill.updatedAt)}</td>
                 </tr>
               );
@@ -168,7 +178,7 @@ export function SkillsList({
   );
 }
 
-function SkillIcon({ name, status }: { name: string; status: AggregatedInstalledSkill["status"] }) {
+function SkillIcon({ name, status }: { name: string; status: SkillBundle["status"] }) {
   const Icon = iconForSkill(name);
   return (
     <span aria-hidden="true" className={`skill-icon ${status !== "valid" ? "is-warning" : ""}`}>
@@ -177,7 +187,7 @@ function SkillIcon({ name, status }: { name: string; status: AggregatedInstalled
   );
 }
 
-function StatusBadge({ status }: { status: AggregatedInstalledSkill["status"] }) {
+function StatusBadge({ status }: { status: SkillBundle["status"] }) {
   if (status === "valid") {
     return <span className="status-badge is-valid"><CheckCircle2 size={15} />通过</span>;
   }
@@ -207,4 +217,19 @@ function formatUpdated(value: string): string {
 
 function fallbackUsage(name: string): number {
   return Math.max(12, name.length * 7);
+}
+
+function labelForSyncStatus(status: SkillBundle["syncStatus"]): string {
+  switch (status) {
+    case "unmanaged":
+      return "未纳入同步";
+    case "idle":
+      return "待配置";
+    case "pending":
+      return "待同步";
+    case "synced":
+      return "已同步";
+    case "drifted":
+      return "有漂移";
+  }
 }

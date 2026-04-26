@@ -21,6 +21,19 @@ export type InstallationState =
   | "conflict"
   | "linked"
   | "external";
+export type BundleGroupingKind =
+  | "manifest"
+  | "custom"
+  | "source-root"
+  | "source-parent"
+  | "single-skill";
+export type BundleOriginType = "source" | "custom";
+export type BundleSyncStatus =
+  | "unmanaged"
+  | "idle"
+  | "pending"
+  | "synced"
+  | "drifted";
 
 export interface ValidationIssue {
   code: string;
@@ -105,6 +118,30 @@ export interface AggregatedInstalledSkill {
   apps: InstalledAppState;
   installations: AggregatedInstallation[];
   primaryInstallation: SkillDetail | null;
+}
+
+export interface SkillBundle {
+  id: string;
+  canonicalId: string;
+  name: string;
+  groupingKind: BundleGroupingKind;
+  originType: BundleOriginType;
+  syncStatus: BundleSyncStatus;
+  status: SkillStatus;
+  installationState: InstallationState;
+  preview: string;
+  updatedAt: string;
+  apps: InstalledAppState;
+  desiredApps: InstalledAppState;
+  sourceIds: string[];
+  sourcePaths: string[];
+  memberCount: number;
+  usageCount: number;
+  missingMemberSkillIds: string[];
+  lastSyncedAt: string | null;
+  lastRepairedAt: string | null;
+  members: AggregatedInstalledSkill[];
+  primarySkill: AggregatedInstalledSkill | null;
 }
 
 export function makeSourceId(toolKind: ToolKind, rootPath: string): string {

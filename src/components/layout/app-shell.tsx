@@ -11,12 +11,13 @@ import {
   Settings,
   Upload,
 } from "lucide-react";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useEffectEvent, useState, type ReactNode } from "react";
 import type { AiSummaryProvider, AiSummaryState } from "../../lib/models/ai-summary";
 import type {
   AggregatedInstalledSkill,
   AppKind,
   InstallationState,
+  SkillBundle,
   SourceRecord,
   ToolKind,
 } from "../../lib/models/skill";
@@ -31,8 +32,9 @@ interface AppShellProps {
   isDemoMode: boolean;
   sources: SourceRecord[];
   appCounts: Record<AppKind, number>;
-  skills: AggregatedInstalledSkill[];
-  selectedSkill: AggregatedInstalledSkill | null;
+  skills: SkillBundle[];
+  availableSkills: AggregatedInstalledSkill[];
+  selectedSkill: SkillBundle | null;
   selectedSkillIds: string[];
   search: string;
   selectedSourceId: string | "all";
@@ -45,6 +47,7 @@ interface AppShellProps {
   selectedAiProvider?: AiSummaryProvider | null;
   onSearchChange: (value: string) => void;
   onRefresh: () => void;
+  onRefreshUsage: () => void;
   onAddFolder: () => void;
   onImportZip: () => void;
   onExportSelected: () => void;
@@ -54,11 +57,18 @@ interface AppShellProps {
   onSelectSkill: (skillId: string | null) => void;
   onToggleSkillSelection: (skillId: string) => void;
   onToggleSelectAllVisible: () => void;
+  onCreateBundle: () => void;
   onClearSelection: () => void;
   onBatchApply: (app: AppKind, enabled: boolean) => void;
   onOpenPath: (path: string) => void;
   onBrowseSource: (source: SourceRecord, log?: boolean) => void;
   onToggleApp: (skillId: string, app: AppKind, enabled: boolean) => void;
+  onRenameBundle: (bundleId: string, name: string) => void;
+  onDeleteBundle: (bundleId: string) => void;
+  onToggleBundleMember: (bundleId: string, memberId: string) => void;
+  onSetBundleDesiredApp: (bundleId: string, app: AppKind, enabled: boolean) => void;
+  onSyncBundle: (bundleId: string) => void;
+  onRepairBundle: (bundleId: string) => void;
   onGenerateAiSummary?: () => void;
   onGenerateAiSummaryWithProvider?: (provider: AiSummaryProvider) => void;
   exportSelectionCount: number;
@@ -82,6 +92,7 @@ export function AppShell({
   sources,
   appCounts,
   skills,
+  availableSkills,
   selectedSkill,
   selectedSkillIds,
   search,
@@ -94,6 +105,7 @@ export function AppShell({
   selectedAiProvider = null,
   onSearchChange,
   onRefresh,
+  onRefreshUsage,
   onAddFolder,
   onImportZip,
   onExportSelected,
@@ -102,16 +114,26 @@ export function AppShell({
   onSelectSkill,
   onToggleSkillSelection,
   onToggleSelectAllVisible,
+  onCreateBundle,
   onClearSelection,
   onBatchApply,
   onOpenPath,
   onBrowseSource,
   onToggleApp,
+  onRenameBundle,
+  onDeleteBundle,
+  onToggleBundleMember,
+  onSetBundleDesiredApp,
+  onSyncBundle,
+  onRepairBundle,
   onGenerateAiSummary,
   onGenerateAiSummaryWithProvider,
   exportSelectionCount,
 }: AppShellProps) {
   const [activeView, setActiveViewState] = useState<ActiveView>(() => viewFromHash());
+  const triggerRefreshUsage = useEffectEvent(() => {
+    onRefreshUsage();
+  });
   const setActiveView = (view: ActiveView) => {
     setActiveViewState(view);
     if (typeof window !== "undefined") {
@@ -124,6 +146,12 @@ export function AppShell({
     window.addEventListener("hashchange", handleHashChange);
     return () => window.removeEventListener("hashchange", handleHashChange);
   }, []);
+
+  useEffect(() => {
+    if (activeView === "usage") {
+      triggerRefreshUsage();
+    }
+  }, [activeView]);
   const totalInstalled = skills.filter((skill) => Object.values(skill.apps).some(Boolean)).length;
   const warningCount = skills.filter((skill) => skill.status !== "valid").length;
   const lastScan = sources.find((source) => source.lastIndexedAt)?.lastIndexedAt;
@@ -218,14 +246,14 @@ export function AppShell({
 
           <div className="skills-page-heading">
             <div>
-              <h1>Skills</h1>
-              <p>管理本机聚合的 Skill、安装状态、校验结果与调用数据。</p>
+              <h1>Bundles</h1>
+              <p>按插件包管理本机聚合的 Skill、安装状态、校验结果与调用数据。</p>
             </div>
-            <span>{skills.length} 个 Skills</span>
+            <span>{skills.length} 个 Bundles</span>
           </div>
 
           <section className="metrics-grid">
-            <MetricCard kind="skills" tone="blue" label="已聚合 Skills" value={skills.length} helper={`较昨日 +${Math.max(1, skills.length % 13)}`} />
+            <MetricCard kind="skills" tone="blue" label="已聚合 Bundles" value={skills.length} helper={`较昨日 +${Math.max(1, skills.length % 13)}`} />
             <MetricCard kind="claude" tone="orange" label="已安装到 Claude" value={appCounts.claude} helper="较昨日 +4" />
             <MetricCard kind="codex" tone="dark" label="已安装到 Codex" value={appCounts.codex} helper="较昨日 +3" />
             <MetricCard kind="gemini" tone="green" label="已安装到 Gemini" value={appCounts.gemini} helper="较昨日 +2" />
@@ -238,6 +266,7 @@ export function AppShell({
             loading={loading}
             onBatchApply={onBatchApply}
             onClearSelection={onClearSelection}
+            onCreateBundle={onCreateBundle}
             onSelectSkill={onSelectSkill}
             onToggleSelectAllVisible={onToggleSelectAllVisible}
             onToggleSkillSelection={onToggleSkillSelection}
@@ -261,7 +290,7 @@ export function AppShell({
           </button>
 
           <footer className="status-footer">
-            <span>技能聚合：{skills.length} 个</span>
+            <span>Bundle 聚合：{skills.length} 个</span>
             <span>已安装（至少 1 个应用）：{totalInstalled} 个</span>
             <span>未安装：{Math.max(0, skills.length - totalInstalled)} 个</span>
             <span>失败：0 个</span>
@@ -282,7 +311,7 @@ export function AppShell({
           ) : null}
 
           {activeView === "usage" ? (
-            <UsageView skills={skills} usageMap={usageMap} />
+            <UsageView skills={skills} usageMap={usageMap} onRefreshUsage={onRefreshUsage} />
           ) : null}
 
           {activeView === "settings" ? (
@@ -301,6 +330,13 @@ export function AppShell({
               onGenerateAiSummary={onGenerateAiSummary}
               onGenerateAiSummaryWithProvider={onGenerateAiSummaryWithProvider}
               onOpenPath={onOpenPath}
+              availableSkills={availableSkills}
+              onDeleteBundle={onDeleteBundle}
+              onRenameBundle={onRenameBundle}
+              onRepairBundle={onRepairBundle}
+              onSetBundleDesiredApp={onSetBundleDesiredApp}
+              onSyncBundle={onSyncBundle}
+              onToggleBundleMember={onToggleBundleMember}
               selectedAiProvider={selectedAiProvider}
               skill={selectedSkill}
             />
@@ -399,7 +435,7 @@ function OverviewView({
   totalInstalled,
   onRefresh,
 }: {
-  skills: AggregatedInstalledSkill[];
+  skills: SkillBundle[];
   appCounts: Record<AppKind, number>;
   warningCount: number;
   totalInstalled: number;
@@ -408,9 +444,9 @@ function OverviewView({
   const topSkills = skills.slice(0, 5);
   return (
     <div className="overview-page">
-      <PageTitle title="概览" subtitle="一览你的 Skills 生态与使用情况" action={<button className="primary-button" onClick={onRefresh} type="button"><RefreshCw size={18} />重新扫描</button>} />
+      <PageTitle title="概览" subtitle="一览你的 Bundles 生态与使用情况" action={<button className="primary-button" onClick={onRefresh} type="button"><RefreshCw size={18} />重新扫描</button>} />
       <section className="metrics-grid is-overview">
-        <MetricCard kind="skills" tone="blue" label="已聚合 Skills" value={skills.length} helper={`较昨日 +${Math.max(1, skills.length % 13)}`} />
+        <MetricCard kind="skills" tone="blue" label="已聚合 Bundles" value={skills.length} helper={`较昨日 +${Math.max(1, skills.length % 13)}`} />
         <MetricCard kind="claude" tone="orange" label="已安装到 Claude" value={appCounts.claude} helper="较昨日 +4" />
         <MetricCard kind="codex" tone="dark" label="已安装到 Codex" value={appCounts.codex} helper="较昨日 +3" />
         <MetricCard kind="gemini" tone="green" label="已安装到 Gemini" value={appCounts.gemini} helper="较昨日 +2" />
@@ -421,25 +457,29 @@ function OverviewView({
         <article className="dashboard-card scan-status-card">
           <h3>扫描状态</h3>
           <div className="scan-success"><span>✓</span><div><strong>扫描已完成</strong><p>所有技能文件均已是最新状态</p></div></div>
-          <dl className="compact-dl"><dt>时间</dt><dd>今天 10:24</dd><dt>扫描目录</dt><dd>5 个</dd><dt>发现 Skills</dt><dd>{skills.length} 个</dd><dt>校验结果</dt><dd className="is-valid">通过（{warningCount} 警告，0 错误）</dd></dl>
+          <dl className="compact-dl"><dt>时间</dt><dd>今天 10:24</dd><dt>扫描目录</dt><dd>5 个</dd><dt>发现 Bundles</dt><dd>{skills.length} 个</dd><dt>校验结果</dt><dd className="is-valid">通过（{warningCount} 警告，0 错误）</dd></dl>
           <button className="primary-button full" onClick={onRefresh} type="button"><RefreshCw size={17} />重新扫描</button>
         </article>
         <article className="dashboard-card chart-card"><h3>各应用已安装 Skill 数量</h3><BarChart counts={appCounts} /></article>
         <article className="dashboard-card chart-card"><h3>最近 7 天 Skill 调用趋势</h3><LineChart /></article>
-        <article className="dashboard-card list-card"><h3>调用次数最高的 Skills</h3><RankList items={topSkills.map((skill, index) => ({ label: skill.name, meta: skill.preview, value: [128, 97, 76, 42, 28][index] ?? 18 }))} /></article>
+        <article className="dashboard-card list-card"><h3>调用次数最高的 Bundles</h3><RankList items={topSkills.map((skill, index) => ({ label: skill.name, meta: skill.preview, value: [128, 97, 76, 42, 28][index] ?? 18 }))} /></article>
         <article className="dashboard-card list-card"><h3>最近变更</h3><ChangeList /></article>
         <article className="dashboard-card actions-card"><h3>快捷操作</h3>{["导入 ZIP", "导出所选", "添加 Skill 文件夹", "打开日志来源"].map((item) => <button className="ghost-button full" key={item} type="button">{item}</button>)}</article>
       </section>
-      <footer className="status-footer inline"><span>技能聚合：{skills.length} 个</span><span>已安装（至少 1 个应用）：{totalInstalled} 个</span><span>未安装：{Math.max(0, skills.length - totalInstalled)} 个</span><span>失败：0 个</span></footer>
+      <footer className="status-footer inline"><span>Bundle 聚合：{skills.length} 个</span><span>已安装（至少 1 个应用）：{totalInstalled} 个</span><span>未安装：{Math.max(0, skills.length - totalInstalled)} 个</span><span>失败：0 个</span></footer>
     </div>
   );
 }
 
-function MarketView({ skills }: { skills: AggregatedInstalledSkill[] }) {
+function MarketView({ skills }: { skills: SkillBundle[] }) {
   const hotSkills = skills.slice(0, 6);
   return (
     <>
       <PageTitle title="Skill 市场" subtitle="发现、安装并管理来自社区与官方的优质 Skills" action={<button className="primary-button" type="button"><Upload size={17} />发布 Skill</button>} />
+      <div className="market-notice" role="note" aria-label="市场状态说明">
+        <strong>预览中</strong>
+        <span>当前页面展示的是静态示意内容。正式市场源、在线安装、更新同步与发布流程尚未接入。</span>
+      </div>
       <div className="market-toolbar"><label className="search-box"><Search size={18} /><input placeholder="搜索 Skill、作者或关键词..." /></label><button className="ghost-button">全部分类<ChevronDown size={16} /></button><button className="ghost-button">全部来源<ChevronDown size={16} /></button><button className="ghost-button">全部价格<ChevronDown size={16} /></button><button className="ghost-button">排序：推荐<ChevronDown size={16} /></button></div>
       <section className="market-hero" aria-label="市场推荐"><div className="market-hero-copy"><span>本周推荐</span><h1>提升开发效率的热门 Skills</h1><p>精选代码审查、部署、文档、测试与提示工程工具</p></div></section>
       <section className="market-category-row">{[["开发",328],["效率",276],["文档",214],["测试",198],["设计",143],["自动化",167],["数据",132],["团队协作",146]].map(([label,count]) => <article key={label} className="category-card"><Box size={20} /><strong>{label}</strong><span>{count} 个</span></article>)}</section>
@@ -465,11 +505,11 @@ function TransferView({ exportSelectionCount, onExportSelected, onImportZip }: {
   );
 }
 
-function UsageView({ skills, usageMap }: { skills: AggregatedInstalledSkill[]; usageMap: SkillUsageMap }) {
+function UsageView({ skills, usageMap, onRefreshUsage }: { skills: SkillBundle[]; usageMap: SkillUsageMap; onRefreshUsage: () => void }) {
   const topSkills = skills.slice(0, 8);
   return (
     <>
-      <PageTitle title="调用统计" subtitle="基于本地会话记录统计 Skills 调用情况。" action={<button className="ghost-button" type="button"><RefreshCw size={17} />刷新数据</button>} />
+      <PageTitle title="调用统计" subtitle="基于本地会话记录统计 Skills 调用情况。" action={<button className="ghost-button" onClick={onRefreshUsage} type="button"><RefreshCw size={17} />刷新数据</button>} />
       <div className="stats-toolbar"><button className="ghost-button">2025-05-16 ~ 2025-05-22<ChevronDown size={16} /></button><button className="ghost-button">应用来源：全部<ChevronDown size={16} /></button><button className="ghost-button">Skill：全部<ChevronDown size={16} /></button><button className="ghost-button">时间范围：按天<ChevronDown size={16} /></button></div>
       <section className="metrics-grid usage-metrics"><MetricCard kind="usage" tone="blue" label="总调用次数" value={2347} helper="较上期 +18.7%" /><MetricCard kind="calendar" tone="green" label="今日调用" value={128} helper="较昨日 +32.8%" /><MetricCard kind="stack" tone="purple" label="近 7 天活跃 Skills" value={18} helper="较上期 +2" /><MetricCard kind="database" tone="orange" label="日志来源状态" value={99} helper="解析成功率 99.2%" /></section>
       <section className="usage-grid"><article className="dashboard-card chart-card wide-ish"><h3>Skill 调用趋势</h3><LineChart /></article><article className="dashboard-card"><h3>各 Skill 调用次数排行</h3><RankList items={topSkills.map((skill) => ({ label: skill.name, meta: "", value: usageMap[skill.id]?.callCount ?? Math.max(12, skill.name.length * 7) }))} /></article><article className="dashboard-card donut-card"><h3>按应用来源分布</h3><DonutLegend /></article><article className="dashboard-card usage-table-card"><h3>最近调用记录</h3><UsageTable skills={topSkills} /></article></section>
@@ -494,7 +534,7 @@ function SettingsView({
   );
 }
 
-function MarketSkillCard({ skill, downloads, compact = false }: { skill: AggregatedInstalledSkill; downloads: string; compact?: boolean }) {
+function MarketSkillCard({ skill, downloads, compact = false }: { skill: SkillBundle; downloads: string; compact?: boolean }) {
   return (
     <article className={compact ? "market-mini-card is-compact" : "market-mini-card"}>
       <span className="skill-icon">{skill.name[0]?.toUpperCase()}</span>
@@ -581,7 +621,7 @@ function DonutLegend() {
   return <div className="donut-legend"><div className="donut" /><div><p><i style={{ background: '#ff8a2a' }} />Claude 1,132 (48.2%)</p><p><i style={{ background: '#4eb96d' }} />Codex 612 (26.1%)</p><p><i style={{ background: '#5d92ff' }} />Gemini 421 (17.9%)</p><p><i style={{ background: '#a56af5' }} />OpenCode 182 (7.8%)</p></div></div>;
 }
 
-function UsageTable({ skills }: { skills: AggregatedInstalledSkill[] }) {
+function UsageTable({ skills }: { skills: SkillBundle[] }) {
   return <table className="mini-table"><tbody>{skills.slice(0, 5).map((skill, index) => <tr key={skill.id}><td>{index === 0 ? "今天 10:24:18" : "今天 09:5" + index + ":37"}</td><td>{["Claude", "Codex", "Gemini", "OpenCode"][index % 4]}</td><td>{skill.name}</td><td>{index + 1}</td></tr>)}</tbody></table>;
 }
 
