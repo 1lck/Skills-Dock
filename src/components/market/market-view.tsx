@@ -36,6 +36,7 @@ const categoryOrder: MarketCategory[] = [
   "docs",
   "research",
   "operations",
+  "lifestyle",
 ];
 
 export function MarketView({

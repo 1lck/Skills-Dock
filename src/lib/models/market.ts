@@ -6,7 +6,8 @@ export type MarketCategory =
   | "automation"
   | "docs"
   | "research"
-  | "operations";
+  | "operations"
+  | "lifestyle";
 
 export type MarketPublisherType = "official" | "community" | "mirror";
 export type MarketInstallState = "catalog" | "available" | "partial" | "installed";
