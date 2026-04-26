@@ -167,6 +167,25 @@ Always use clear headings, bullet points, and markdown tables when comparing opt
 Remember: The best code is the code you don't have to write because the design was well thought out.`
     ),
     makeSkill(
+      superpowers,
+      "writing-plans",
+      "writing-plans",
+      "Turns approved designs into concrete implementation steps.",
+      "valid",
+      "codex",
+      `# Writing Plans
+
+You turn an approved design into a step-by-step execution plan with concrete files, tests, and verification commands.
+
+## Directives
+- Break work into small tasks with clear ownership.
+- Show exact file paths to change.
+- Include test commands and expected outcomes.
+- Keep plans practical and free of filler.
+
+The end result should be easy for another agent or engineer to execute without guessing.`,
+    ),
+    makeSkill(
       claude,
       "documentation-lookup",
       "documentation-lookup",
