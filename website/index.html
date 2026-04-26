@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Skills-Dock - 你的终极 AI 技能工作台</title>
+    <title>Skills-Dock - 本地 AI Skills 与 Bundles 工作台</title>
+    <link rel="icon" type="image/png" href="img/skill-dock-logo.png">
     <link rel="stylesheet" href="style.css">
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
@@ -13,12 +14,12 @@
     <nav class="navbar">
         <div class="nav-container">
             <div class="logo">
-                <img src="logo.png" alt="Skills-Dock Logo" class="logo-icon">
+                <img src="img/skill-dock-logo.png" alt="Skills-Dock Logo" class="logo-icon">
                 <span class="logo-text">Skills-Dock</span>
             </div>
             <div class="nav-links">
                 <a href="#features">核心功能</a>
-                <a href="#how-it-works">使用指南</a>
+                <a href="#gallery">界面预览</a>
                 <a href="https://github.com/1lck/Skills-Dock" target="_blank" class="btn btn-primary">
                     <i data-lucide="github"></i> 访问 GitHub
                 </a>
@@ -28,26 +29,27 @@
 
     <!-- 英雄首屏 -->
     <header class="hero">
-        <div class="hero-content">
-            <div class="badge fade-up">v0.1.11</div>
-            <h1 class="fade-up" style="animation-delay: 0.1s;">为 AI 时代打造的<br><span class="text-gradient">统一技能总线</span></h1>
-            <p class="hero-subtitle fade-up" style="animation-delay: 0.2s;">
-                打破平台孤岛，集中管理所有主流 AI 工具的专属 Skills。<br>现在支持一键 ZIP 导入导出，用更清晰的聚合面板统筹你的技能矩阵。
-            </p>
-            <div class="hero-actions fade-up" style="animation-delay: 0.3s;">
-                <a href="https://github.com/1lck/Skills-Dock" target="_blank" class="btn btn-large btn-gradient">
-                    <i data-lucide="download"></i> 免费获取开源版
-                </a>
-                <a href="#features" class="btn btn-large btn-outline">
-                    了解更多
-                </a>
+        <div class="hero-shell">
+            <div class="hero-content">
+                <div class="badge fade-up">v0.1.15</div>
+                <h1 class="fade-up" style="animation-delay: 0.1s;">AI Skills 的<br><span class="text-gradient">本地工作台</span></h1>
+                <p class="hero-subtitle fade-up" style="animation-delay: 0.2s;">
+                    统一查看、聚合和管理你在 Codex、Claude、Gemini、OpenCode 里的 Skills 与 Bundles。
+                </p>
+                <div class="hero-actions fade-up" style="animation-delay: 0.3s;">
+                    <a href="https://github.com/1lck/Skills-Dock" target="_blank" class="btn btn-large btn-gradient">
+                        <i data-lucide="download"></i> 免费获取开源版
+                    </a>
+                    <a href="#gallery" class="btn btn-large btn-outline">
+                        查看真实界面
+                    </a>
+                </div>
             </div>
-        </div>
-        
-        <!-- UI 预览面板展示 (真实应用截图) -->
-        <div class="hero-mockup fade-up" style="animation-delay: 0.5s;">
-            <div class="screenshot-wrapper">
-                <img src="screenshot-main.png" alt="Skills-Dock 主界面截图" class="app-screenshot">
+            
+            <div class="hero-mockup fade-up" style="animation-delay: 0.5s;">
+                <div class="screenshot-wrapper">
+                    <img src="UI/overview.png" alt="Skills-Dock 概览页截图" class="app-screenshot">
+                </div>
             </div>
         </div>
     </header>
@@ -56,42 +58,92 @@
     <section id="features" class="features">
         <div class="section-header reveal">
             <h2>为什么选择 Skills-Dock？</h2>
-            <p>专为需要驾驭多个底层 AI 模型引擎的高阶开发者与提示词工程师设计，实现前所未有的全局视野。</p>
+            <p>把本地 Skill 管理从散落目录，收敛成可操作的统一视图。</p>
         </div>
         <div class="feature-grid">
             <div class="feature-card reveal">
                 <div class="feature-icon"><i data-lucide="layout-grid"></i></div>
                 <h3>一站式集中管理</h3>
-                <p>彻底告别散落在不同工具中的零散文件夹。无论你的技能存放在 ~/.claude 还是 ~/.gemini，Skills-Dock 都能跨平台扫描，为你建立统一的中央控制台。</p>
+                <p>统一扫描 Codex、Claude、Gemini、OpenCode 和自定义目录。</p>
             </div>
             <div class="feature-card reveal" style="transition-delay: 0.1s;">
                 <div class="feature-icon"><i data-lucide="layers"></i></div>
-                <h3>多工具状态直观化</h3>
-                <p>直观对比和查看同一个 Skill 在不同 AI 工具下的安装和校验状态。通过智能合并列表，一目了然地掌握哪些指令在哪些模型中已就绪、哪些存在差异。</p>
+                <h3>Bundle 聚合与本地整合包</h3>
+                <p>不只看单个 Skill，也能按 Bundle 和本地整合包来组织能力集合。</p>
             </div>
             <div class="feature-card reveal" style="transition-delay: 0.2s;">
                 <div class="feature-icon"><i data-lucide="zap"></i></div>
-                <h3>极简且强大的交互体验</h3>
-                <p>化繁为简。我们将底层的复杂目录和配置转化为直观的可视化卡片，并补上一键 ZIP 导入导出，让迁移与分享技能包更直接。</p>
+                <h3>以用户操作为中心的界面</h3>
+                <p>优先展示摘要、状态和操作，不把原始 Agent 文档堆到前台。</p>
             </div>
         </div>
     </section>
 
-    <!-- 深入详情展示 -->
+    <section id="gallery" class="gallery-section">
+        <div class="section-header reveal">
+            <div class="eyebrow">真实界面预览</div>
+            <h2>官网直接展示当前版本的核心页面</h2>
+            <p>这里放的都是当前版本已经可用的本地页面。</p>
+        </div>
+        <div class="gallery-grid">
+            <article class="gallery-card gallery-card-large reveal">
+                <div class="gallery-card-head">
+                    <span class="gallery-kicker">Skills Workspace</span>
+                    <h3>按 Bundle 聚合后的 Skills 主工作区</h3>
+                    <p>在列表、安装状态和摘要预览之间快速切换。</p>
+                </div>
+                <div class="gallery-media">
+                    <img src="UI/skills-list.png" alt="Skills-Dock Skills 列表页截图" class="app-screenshot">
+                </div>
+            </article>
+            <article class="gallery-card reveal" style="transition-delay: 0.05s;">
+                <div class="gallery-card-head">
+                    <span class="gallery-kicker">Import / Export</span>
+                    <h3>本地 ZIP 导入导出</h3>
+                    <p>批量迁移、备份和恢复本地 Skills。</p>
+                </div>
+                <div class="gallery-media">
+                    <img src="UI/import-export.png" alt="Skills-Dock 导入导出页截图" class="app-screenshot">
+                </div>
+            </article>
+            <article class="gallery-card reveal" style="transition-delay: 0.1s;">
+                <div class="gallery-card-head">
+                    <span class="gallery-kicker">Usage Analytics</span>
+                    <h3>按需刷新的调用统计</h3>
+                    <p>基于本地会话日志统计，并把高开销扫描收敛到按需触发。</p>
+                </div>
+                <div class="gallery-media">
+                    <img src="UI/usage-analytics.png" alt="Skills-Dock 调用统计页截图" class="app-screenshot">
+                </div>
+            </article>
+            <article class="gallery-card gallery-card-large reveal" style="transition-delay: 0.15s;">
+                <div class="gallery-card-head">
+                    <span class="gallery-kicker">Settings</span>
+                    <h3>多应用路径与扫描策略集中配置</h3>
+                    <p>统一管理 Skill 目录、自定义目录和扫描偏好。</p>
+                </div>
+                <div class="gallery-media">
+                    <img src="UI/settings.png" alt="Skills-Dock 设置页截图" class="app-screenshot">
+                </div>
+            </article>
+        </div>
+    </section>
+
     <section class="showcase">
         <div class="showcase-container">
             <div class="showcase-text reveal">
-                <h2>直观穿透多平台的底层指令</h2>
-                <p>在技能详情页，你可以一眼看穿该指令在各个引擎中的真实安装位置与 Hash 校验结果。配合内置极速的 Markdown 引擎，长篇系统指令也能以最完美的排版展示，拒绝枯燥的控制台体验。</p>
+                <div class="eyebrow">本地优先</div>
+                <h2>先把本地链路打通，再谈市场整合</h2>
+                <p>当前版本先解决扫描、聚合、迁移、同步和排查这些真实本地问题。</p>
                 <ul class="check-list">
-                    <li><i data-lucide="check-circle-2"></i> 专为开发者优化的代码等宽排版</li>
-                    <li><i data-lucide="check-circle-2"></i> 一键无感复制指令内容</li>
-                    <li><i data-lucide="check-circle-2"></i> 支持自动重索引</li>
+                    <li><i data-lucide="check-circle-2"></i> 多工具本地 Skill 扫描</li>
+                    <li><i data-lucide="check-circle-2"></i> 来源包聚合与本地整合包维护</li>
+                    <li><i data-lucide="check-circle-2"></i> 迁移、同步与排查</li>
                 </ul>
             </div>
             <div class="showcase-image reveal">
                 <div class="detail-screenshot-wrapper">
-                    <img src="screenshot-detail.png" alt="Skills-Dock Detail Panel" class="app-screenshot">
+                    <img src="UI/import-export.png" alt="Skills-Dock 本地导入导出页截图" class="app-screenshot">
                 </div>
             </div>
         </div>
@@ -101,7 +153,7 @@
     <section id="how-it-works" class="cta-section">
         <div class="cta-container reveal">
             <h2>准备好升级你的 AI 工作流了吗？</h2>
-            <p>立刻前往 GitHub 下载源码，基于 Tauri 构建属于你的桌面端应用。</p>
+            <p>前往 GitHub，直接体验本地 Skill 扫描与 Bundle 管理。</p>
             <a href="https://github.com/1lck/Skills-Dock" target="_blank" class="btn btn-large btn-black">
                 <i data-lucide="github"></i> 获取 Skills-Dock
             </a>
@@ -112,13 +164,13 @@
     <footer class="footer">
         <div class="footer-content">
             <div class="footer-logo">
-                <img src="logo.png" alt="Skills-Dock Logo" class="logo-icon small">
+                <img src="img/skill-dock-logo.png" alt="Skills-Dock Logo" class="logo-icon small">
                 <span class="logo-text">Skills-Dock</span>
             </div>
             <div class="footer-links">
                 <a href="https://github.com/1lck/Skills-Dock">GitHub 仓库</a>
-                <a href="#">使用文档</a>
-                <a href="#">关于我们</a>
+                <a href="https://github.com/1lck/Skills-Dock#readme">使用文档</a>
+                <a href="https://github.com/1lck/Skills-Dock/releases">版本发布</a>
             </div>
         </div>
         <div class="footer-bottom">
