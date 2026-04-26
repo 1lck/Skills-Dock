@@ -30,6 +30,8 @@ import { ClaudeLogo, CodexLogo, GeminiLogo, OpenCodeLogo } from "../icons/app-lo
 interface AppShellProps {
   loading: boolean;
   isDemoMode: boolean;
+  appVersion: string;
+  updateBusy: boolean;
   sources: SourceRecord[];
   appCounts: Record<AppKind, number>;
   skills: SkillBundle[];
@@ -48,6 +50,7 @@ interface AppShellProps {
   onSearchChange: (value: string) => void;
   onRefresh: () => void;
   onRefreshUsage: () => void;
+  onCheckForUpdates: () => void;
   onAddFolder: () => void;
   onImportZip: () => void;
   onExportSelected: () => void;
@@ -89,6 +92,8 @@ function viewFromHash(): ActiveView {
 export function AppShell({
   loading,
   isDemoMode,
+  appVersion,
+  updateBusy,
   sources,
   appCounts,
   skills,
@@ -106,6 +111,7 @@ export function AppShell({
   onSearchChange,
   onRefresh,
   onRefreshUsage,
+  onCheckForUpdates,
   onAddFolder,
   onImportZip,
   onExportSelected,
@@ -315,9 +321,20 @@ export function AppShell({
           ) : null}
 
           {activeView === "settings" ? (
-            <SettingsView onBrowseSource={onBrowseSource} sources={sources} onRefresh={onRefresh} />
+            <SettingsView
+              appVersion={appVersion}
+              onBrowseSource={onBrowseSource}
+              onCheckForUpdates={onCheckForUpdates}
+              onRefresh={onRefresh}
+              sources={sources}
+              updateBusy={updateBusy}
+            />
           ) : null}
         </section>
+      </div>
+
+      <div aria-label="当前版本" className="version-corner">
+        v{appVersion}
       </div>
 
       {selectedSkill ? (
@@ -518,18 +535,24 @@ function UsageView({ skills, usageMap, onRefreshUsage }: { skills: SkillBundle[]
 }
 
 function SettingsView({
+  appVersion,
   sources,
   onRefresh,
   onBrowseSource,
+  onCheckForUpdates,
+  updateBusy,
 }: {
+  appVersion: string;
   sources: SourceRecord[];
   onRefresh: () => void;
   onBrowseSource: (source: SourceRecord, log?: boolean) => void;
+  onCheckForUpdates: () => void;
+  updateBusy: boolean;
 }) {
   return (
     <>
       <PageTitle title="设置" subtitle="配置扫描、解析与校验等偏好设置。" action={<div className="header-actions"><button className="ghost-button" onClick={onRefresh} type="button"><RefreshCw size={17} />立即重新扫描</button><button className="ghost-button" type="button">恢复默认</button><button className="primary-button" type="button">保存设置</button></div>} />
-      <section className="settings-page-grid"><article className="dashboard-card"><h3>默认 Skill 扫描目录</h3><p className="panel-subtitle">配置各应用的默认扫描目录，系统将自动扫描这些目录下的 Skill。</p><SourceSettingsRows onBrowseSource={onBrowseSource} sources={sources} /></article><article className="dashboard-card"><h3>会话日志解析</h3><p className="panel-subtitle">配置各应用会话日志来源，用于提取使用记录与调用统计。</p><SourceSettingsRows log onBrowseSource={onBrowseSource} sources={sources.slice(0, 4)} /></article><article className="dashboard-card"><h3>自定义 Skill 文件夹</h3><MiniRows rows={["~/Projects/company-skills", "~/Documents/skills-templates", "/Users/shared/skills"]} /></article><article className="dashboard-card"><h3>校验偏好</h3><ToggleRows rows={["严格校验", "导入时自动校验", "显示内容差异"]} /></article><article className="dashboard-card"><h3>自动扫描</h3><ToggleRows rows={["应用启动时扫描", "文件变更时监控", "定时自动扫描"]} /></article><article className="dashboard-card"><h3>其他</h3><ToggleRows rows={["扫描完成后发送通知", "保留扫描历史"]} /></article></section>
+      <section className="settings-page-grid"><article className="dashboard-card"><h3>默认 Skill 扫描目录</h3><p className="panel-subtitle">配置各应用的默认扫描目录，系统将自动扫描这些目录下的 Skill。</p><SourceSettingsRows onBrowseSource={onBrowseSource} sources={sources} /></article><article className="dashboard-card"><h3>会话日志解析</h3><p className="panel-subtitle">配置各应用会话日志来源，用于提取使用记录与调用统计。</p><SourceSettingsRows log onBrowseSource={onBrowseSource} sources={sources.slice(0, 4)} /></article><article className="dashboard-card"><h3>应用更新</h3><p className="panel-subtitle">当前版本 v{appVersion}。可随时手动检查是否有新版本可下载。</p><div className="update-card-row"><div><strong>当前版本</strong><span>v{appVersion}</span></div><button className="primary-button" disabled={updateBusy} onClick={onCheckForUpdates} type="button"><RefreshCw className={updateBusy ? "is-spinning" : undefined} size={17} />{updateBusy ? "检查中..." : "检查更新"}</button></div></article><article className="dashboard-card"><h3>自定义 Skill 文件夹</h3><MiniRows rows={["~/Projects/company-skills", "~/Documents/skills-templates", "/Users/shared/skills"]} /></article><article className="dashboard-card"><h3>校验偏好</h3><ToggleRows rows={["严格校验", "导入时自动校验", "显示内容差异"]} /></article><article className="dashboard-card"><h3>自动扫描</h3><ToggleRows rows={["应用启动时扫描", "文件变更时监控", "定时自动扫描"]} /></article><article className="dashboard-card"><h3>其他</h3><ToggleRows rows={["扫描完成后发送通知", "保留扫描历史"]} /></article></section>
     </>
   );
 }

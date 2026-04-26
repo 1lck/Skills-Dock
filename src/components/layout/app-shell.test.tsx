@@ -79,6 +79,8 @@ function renderShell(overrides: Partial<ComponentProps<typeof AppShell>> = {}) {
   const props: ComponentProps<typeof AppShell> = {
     loading: false,
     isDemoMode: false,
+    appVersion: "0.1.15",
+    updateBusy: false,
     sources,
     appCounts,
     skills,
@@ -96,6 +98,7 @@ function renderShell(overrides: Partial<ComponentProps<typeof AppShell>> = {}) {
     onSearchChange: vi.fn(),
     onRefresh: vi.fn(),
     onRefreshUsage: vi.fn(),
+    onCheckForUpdates: vi.fn(),
     onAddFolder: vi.fn(),
     onImportZip: vi.fn(),
     onExportSelected: vi.fn(),
@@ -168,6 +171,12 @@ describe("AppShell", () => {
     expect(screen.getByText(/演示模式/)).toBeVisible();
   });
 
+  test("shows the current version in the corner badge", () => {
+    renderShell({ appVersion: "1.2.3" });
+
+    expect(screen.getByLabelText("当前版本")).toHaveTextContent("v1.2.3");
+  });
+
   test("toggles app install state from the skill row", () => {
     const onToggleApp = vi.fn();
 
@@ -218,6 +227,8 @@ describe("AppShell", () => {
       <AppShell
         loading={false}
         isDemoMode={false}
+        appVersion="0.1.15"
+        updateBusy={false}
         sources={sources}
         appCounts={appCounts}
         skills={skills}
@@ -235,6 +246,7 @@ describe("AppShell", () => {
         onSearchChange={vi.fn()}
         onRefresh={vi.fn()}
         onRefreshUsage={vi.fn()}
+        onCheckForUpdates={vi.fn()}
         onAddFolder={vi.fn()}
         onImportZip={vi.fn()}
         onExportSelected={onExportSelected}
@@ -285,6 +297,19 @@ describe("AppShell", () => {
     expect(onBrowseSource).toHaveBeenCalledWith(sources[0], false);
   });
 
+  test("renders a manual update action in settings", () => {
+    window.location.hash = "#settings";
+    const onCheckForUpdates = vi.fn();
+
+    renderShell({ appVersion: "1.2.3", onCheckForUpdates });
+
+    expect(screen.getByText("应用更新")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "检查更新" }));
+
+    expect(onCheckForUpdates).toHaveBeenCalledOnce();
+    expect(screen.getAllByText("v1.2.3").length).toBeGreaterThan(0);
+  });
+
   test("loads usage data only when usage view is active", () => {
     const onRefreshUsage = vi.fn();
     window.location.hash = "#usage";
@@ -297,6 +322,8 @@ describe("AppShell", () => {
       <AppShell
         loading={false}
         isDemoMode={false}
+        appVersion="0.1.15"
+        updateBusy={false}
         sources={sources}
         appCounts={appCounts}
         skills={skills}
@@ -314,6 +341,7 @@ describe("AppShell", () => {
         onSearchChange={vi.fn()}
         onRefresh={vi.fn()}
         onRefreshUsage={onRefreshUsage}
+        onCheckForUpdates={vi.fn()}
         onAddFolder={vi.fn()}
         onImportZip={vi.fn()}
         onExportSelected={vi.fn()}

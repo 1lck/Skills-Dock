@@ -107,6 +107,26 @@ button:disabled { cursor: not-allowed; opacity: 0.55; }
   z-index: 1;
 }
 
+.version-corner {
+  position: absolute;
+  right: 14px;
+  bottom: 10px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 10px;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(203, 213, 225, 0.9);
+  border-radius: 999px;
+  box-shadow: var(--shadow-card);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  pointer-events: none;
+}
+
 .app-layout {
   flex: 1;
   min-height: 0;
@@ -1338,6 +1358,16 @@ input[type="checkbox"] { width: 15px; height: 15px; accent-color: var(--blue); c
 .source-settings-rows div { display: grid; grid-template-columns: 104px 1fr 62px 58px; gap: 8px; align-items: center; }
 .source-settings-rows span { min-width: 0; padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: #F8FAFC; }
 .source-settings-rows em { color: var(--green); font-style: normal; font-weight: 700; }
+.update-card-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; }
+.update-card-row div { display: grid; gap: 4px; }
+.update-card-row strong { font-size: 12px; color: var(--muted); }
+.update-card-row span { font-family: 'JetBrains Mono', "SFMono-Regular", Consolas, monospace; font-size: 18px; font-weight: 700; color: var(--text); }
+.is-spinning { animation: spin 0.9s linear infinite; }
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
 .toggle-rows { display: grid; }
 .toggle-rows label { display: flex; justify-content: space-between; align-items: center; gap: 14px; padding: 10px 0; border-bottom: 1px solid var(--line); cursor: pointer; }
 .toggle-rows label:last-child { border-bottom: 0; }
