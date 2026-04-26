@@ -1,5 +1,5 @@
 import { getVersion } from "@tauri-apps/api/app";
-import { useEffect, useEffectEvent, useState } from "react";
+import { useEffect, useEffectEvent, useMemo, useState } from "react";
 import { check } from "@tauri-apps/plugin-updater";
 import { ask, message } from "@tauri-apps/plugin-dialog";
 
@@ -7,12 +7,17 @@ import "./App.css";
 import { AppShell } from "./components/layout/app-shell";
 import { useSkillsDock } from "./hooks/use-skills-dock";
 import packageJson from "../package.json";
+import { buildMarketPackages } from "./lib/application/market-packages";
 import { performUpdateCheck } from "./lib/application/update-check";
 
 function App() {
   const skillsDock = useSkillsDock();
   const [appVersion, setAppVersion] = useState(packageJson.version);
   const [updateBusy, setUpdateBusy] = useState(false);
+  const marketPackages = useMemo(
+    () => buildMarketPackages(skillsDock.allBundles),
+    [skillsDock.allBundles],
+  );
 
   const runUpdateCheck = useEffectEvent(async (manual: boolean) => {
     setUpdateBusy(true);
@@ -94,12 +99,17 @@ function App() {
       onCreateBundle={skillsDock.createLocalBundle}
       onClearSelection={skillsDock.clearSelection}
       onBatchApply={(app, enabled) => void skillsDock.batchApply(app, enabled)}
+      onInstallMarketPackage={(pkg, targetApp) =>
+        void skillsDock.installMarketPackage(pkg, targetApp)
+      }
       onToggleApp={(skillId, app, enabled) =>
         void skillsDock.toggleApp(skillId, app, enabled)
       }
       onBrowseSource={(source, log) => void skillsDock.browseSource(source, log)}
       appCounts={skillsDock.appCounts}
       batchBusy={skillsDock.batchBusy}
+      marketInstallBusyPackageId={skillsDock.marketInstallBusyPackageId}
+      marketPackages={marketPackages}
       search={skillsDock.search}
       selectedSkill={skillsDock.selectedSkill}
       selectedInstallationState={skillsDock.selectedInstallationState}

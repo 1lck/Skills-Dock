@@ -119,3 +119,56 @@ pub struct ExportSkillsZipResult {
     pub output_path: String,
     pub exported_skill_count: usize,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MarketInstallSkillRequest {
+    pub slug: String,
+    pub skill_id: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct InstallMarketPackageRequest {
+    pub package_id: String,
+    pub package_name: String,
+    pub skills: Vec<MarketInstallSkillRequest>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct InstallMarketPackageResult {
+    pub target_root: String,
+    pub installed_skill_paths: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MarketPackageSnapshotRequest {
+    pub package_id: String,
+    pub skills: Vec<MarketInstallSkillRequest>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MarketRemoteMemberSnapshot {
+    pub slug: String,
+    pub version: String,
+    pub downloads: u64,
+    pub installs: u64,
+    pub stars: u64,
+    pub updated_at: Option<i64>,
+    pub owner_name: Option<String>,
+    pub source: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MarketPackageSnapshotResult {
+    pub package_id: String,
+    pub total_downloads: u64,
+    pub total_installs: u64,
+    pub member_count: usize,
+    pub last_updated_at: Option<i64>,
+    pub members: Vec<MarketRemoteMemberSnapshot>,
+}

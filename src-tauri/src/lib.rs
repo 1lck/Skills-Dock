@@ -1,11 +1,14 @@
 mod domain;
+mod market;
 mod scan;
 mod summary;
 mod usage;
 
 use domain::{
     ExportSkillsZipRequest, ExportSkillsZipResult, ImportSkillsZipRequest, ImportSkillsZipResult,
-    SkillSnapshot, SourceInput, SourceRecord, ToggleAppInstallRequest,
+    InstallMarketPackageRequest, InstallMarketPackageResult, MarketPackageSnapshotRequest,
+    MarketPackageSnapshotResult, SkillSnapshot, SourceInput, SourceRecord,
+    ToggleAppInstallRequest,
 };
 use summary::{SummaryRequest, SummarySnapshot, SummaryState};
 use std::collections::HashMap;
@@ -43,6 +46,21 @@ fn import_skills_zip(request: ImportSkillsZipRequest) -> Result<ImportSkillsZipR
 #[tauri::command]
 fn export_skills_zip(request: ExportSkillsZipRequest) -> Result<ExportSkillsZipResult, String> {
     scan::export_skills_zip(&request).map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn install_market_package(
+    app: tauri::AppHandle,
+    request: InstallMarketPackageRequest,
+) -> Result<InstallMarketPackageResult, String> {
+    market::install_market_package(&app, &request)
+}
+
+#[tauri::command]
+fn get_market_package_snapshot(
+    request: MarketPackageSnapshotRequest,
+) -> Result<MarketPackageSnapshotResult, String> {
+    market::get_market_package_snapshot(&request)
 }
 
 #[tauri::command]
@@ -89,6 +107,8 @@ pub fn run() {
             toggle_app_installs,
             import_skills_zip,
             export_skills_zip,
+            install_market_package,
+            get_market_package_snapshot,
             scan_skill_usage,
             get_installed_apps,
             get_skill_ai_summary,

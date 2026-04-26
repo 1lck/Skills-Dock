@@ -10,7 +10,7 @@ describe("performUpdateCheck", () => {
       manual: true,
       isDemoMode: false,
       isDev: false,
-      currentVersion: "0.1.15",
+      currentVersion: "0.1.16",
       checkForUpdate: vi.fn().mockResolvedValue(null),
       confirmUpdate: vi.fn(),
       notify,
@@ -18,7 +18,7 @@ describe("performUpdateCheck", () => {
     });
 
     expect(notify).toHaveBeenCalledWith(
-      "当前已是最新版本（v0.1.15）。",
+      "当前已是最新版本（v0.1.16）。",
       "已是最新版本",
     );
   });

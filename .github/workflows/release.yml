@@ -78,8 +78,13 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
         with:
           tagName: ${{ github.ref_name }}
-          releaseName: 'Skills Dock ${{ github.ref_name }}'
-          releaseBody: '🤖 自动发布的 Skills Dock 安装包。请在下方 Assets 中下载对应平台的安装文件。'
+          releaseName: 'Skills Dock 正式版 ${{ github.ref_name }}'
+          releaseBody: |
+            Skills Dock 自动发布版本。
+
+            本次版本包含市场模块重构、能力包数据扩充，以及按目标 AI 工具安装的改进。
+
+            请在下方 Assets 中下载对应平台的安装文件。
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}

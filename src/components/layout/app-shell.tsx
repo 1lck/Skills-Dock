@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { useEffect, useEffectEvent, useState, type ReactNode } from "react";
 import type { AiSummaryProvider, AiSummaryState } from "../../lib/models/ai-summary";
+import type { MarketPackage } from "../../lib/models/market";
 import type {
   AggregatedInstalledSkill,
   AppKind,
@@ -24,6 +25,7 @@ import type {
 import type { SkillUsageMap } from "../../lib/storage/skill-usage";
 import { DisabledHint } from "../common/disabled-hint";
 import { SkillDetailPanel } from "../detail/skill-detail";
+import { MarketView } from "../market/market-view";
 import { SkillsList } from "../skills/skills-list";
 import { ClaudeLogo, CodexLogo, GeminiLogo, OpenCodeLogo } from "../icons/app-logos";
 
@@ -34,6 +36,8 @@ interface AppShellProps {
   updateBusy: boolean;
   sources: SourceRecord[];
   appCounts: Record<AppKind, number>;
+  marketInstallBusyPackageId: string | null;
+  marketPackages: MarketPackage[];
   skills: SkillBundle[];
   availableSkills: AggregatedInstalledSkill[];
   selectedSkill: SkillBundle | null;
@@ -63,6 +67,7 @@ interface AppShellProps {
   onCreateBundle: () => void;
   onClearSelection: () => void;
   onBatchApply: (app: AppKind, enabled: boolean) => void;
+  onInstallMarketPackage: (pkg: MarketPackage, targetApp: AppKind) => void;
   onOpenPath: (path: string) => void;
   onBrowseSource: (source: SourceRecord, log?: boolean) => void;
   onToggleApp: (skillId: string, app: AppKind, enabled: boolean) => void;
@@ -96,6 +101,8 @@ export function AppShell({
   updateBusy,
   sources,
   appCounts,
+  marketInstallBusyPackageId,
+  marketPackages,
   skills,
   availableSkills,
   selectedSkill,
@@ -123,6 +130,7 @@ export function AppShell({
   onCreateBundle,
   onClearSelection,
   onBatchApply,
+  onInstallMarketPackage,
   onOpenPath,
   onBrowseSource,
   onToggleApp,
@@ -309,7 +317,13 @@ export function AppShell({
           ) : null}
 
           {activeView === "market" ? (
-            <MarketView skills={skills} />
+            <MarketView
+              installedApps={installedApps}
+              installBusyPackageId={marketInstallBusyPackageId}
+              isDemoMode={isDemoMode}
+              onInstallPackage={onInstallMarketPackage}
+              packages={marketPackages}
+            />
           ) : null}
 
           {activeView === "transfer" ? (
@@ -488,26 +502,6 @@ function OverviewView({
   );
 }
 
-function MarketView({ skills }: { skills: SkillBundle[] }) {
-  const hotSkills = skills.slice(0, 6);
-  return (
-    <>
-      <PageTitle title="Skill 市场" subtitle="发现、安装并管理来自社区与官方的优质 Skills" action={<button className="primary-button" type="button"><Upload size={17} />发布 Skill</button>} />
-      <div className="market-notice" role="note" aria-label="市场状态说明">
-        <strong>预览中</strong>
-        <span>当前页面展示的是静态示意内容。正式市场源、在线安装、更新同步与发布流程尚未接入。</span>
-      </div>
-      <div className="market-toolbar"><label className="search-box"><Search size={18} /><input placeholder="搜索 Skill、作者或关键词..." /></label><button className="ghost-button">全部分类<ChevronDown size={16} /></button><button className="ghost-button">全部来源<ChevronDown size={16} /></button><button className="ghost-button">全部价格<ChevronDown size={16} /></button><button className="ghost-button">排序：推荐<ChevronDown size={16} /></button></div>
-      <section className="market-hero" aria-label="市场推荐"><div className="market-hero-copy"><span>本周推荐</span><h1>提升开发效率的热门 Skills</h1><p>精选代码审查、部署、文档、测试与提示工程工具</p></div></section>
-      <section className="market-category-row">{[["开发",328],["效率",276],["文档",214],["测试",198],["设计",143],["自动化",167],["数据",132],["团队协作",146]].map(([label,count]) => <article key={label} className="category-card"><Box size={20} /><strong>{label}</strong><span>{count} 个</span></article>)}</section>
-      <section className="market-layout-grid">
-        <article className="dashboard-card market-recommend"><h3>推荐 Skills</h3><div className="recommend-grid">{hotSkills.map((skill, index) => <MarketSkillCard key={skill.id} skill={skill} downloads={["12.4k","9.3k","8.1k","6.7k","5.2k","4.9k"][index] ?? "2.1k"} />)}</div></article>
-        <aside className="market-side"><article className="dashboard-card"><h3>热门榜单</h3><RankList items={hotSkills.slice(0, 5).map((skill, index) => ({ label: skill.name, meta: "", value: ["12.4k","9.3k","8.1k","6.7k","5.2k"][index] ?? "1.2k" }))} /></article><article className="dashboard-card skill-preview-card"><h3>Skill 详情预览</h3>{hotSkills[0] ? <MarketSkillCard skill={hotSkills[0]} downloads="12.4k" compact /> : null}<button className="primary-button full" type="button">安装到应用</button></article></aside>
-      </section>
-    </>
-  );
-}
-
 function TransferView({ exportSelectionCount, onExportSelected, onImportZip }: { exportSelectionCount: number; onExportSelected: () => void; onImportZip: () => void }) {
   const rows = ["skill-pack-2025-05-15.zip", "skill-dock-backup-2025-05-15.zip", "team-skill-bundle.zip", "my-skills-2025-05-14.zip"];
   return (
@@ -554,20 +548,6 @@ function SettingsView({
       <PageTitle title="设置" subtitle="配置扫描、解析与校验等偏好设置。" action={<div className="header-actions"><button className="ghost-button" onClick={onRefresh} type="button"><RefreshCw size={17} />立即重新扫描</button><button className="ghost-button" type="button">恢复默认</button><button className="primary-button" type="button">保存设置</button></div>} />
       <section className="settings-page-grid"><article className="dashboard-card"><h3>默认 Skill 扫描目录</h3><p className="panel-subtitle">配置各应用的默认扫描目录，系统将自动扫描这些目录下的 Skill。</p><SourceSettingsRows onBrowseSource={onBrowseSource} sources={sources} /></article><article className="dashboard-card"><h3>会话日志解析</h3><p className="panel-subtitle">配置各应用会话日志来源，用于提取使用记录与调用统计。</p><SourceSettingsRows log onBrowseSource={onBrowseSource} sources={sources.slice(0, 4)} /></article><article className="dashboard-card"><h3>应用更新</h3><p className="panel-subtitle">当前版本 v{appVersion}。可随时手动检查是否有新版本可下载。</p><div className="update-card-row"><div><strong>当前版本</strong><span>v{appVersion}</span></div><button className="primary-button" disabled={updateBusy} onClick={onCheckForUpdates} type="button"><RefreshCw className={updateBusy ? "is-spinning" : undefined} size={17} />{updateBusy ? "检查中..." : "检查更新"}</button></div></article><article className="dashboard-card"><h3>自定义 Skill 文件夹</h3><MiniRows rows={["~/Projects/company-skills", "~/Documents/skills-templates", "/Users/shared/skills"]} /></article><article className="dashboard-card"><h3>校验偏好</h3><ToggleRows rows={["严格校验", "导入时自动校验", "显示内容差异"]} /></article><article className="dashboard-card"><h3>自动扫描</h3><ToggleRows rows={["应用启动时扫描", "文件变更时监控", "定时自动扫描"]} /></article><article className="dashboard-card"><h3>其他</h3><ToggleRows rows={["扫描完成后发送通知", "保留扫描历史"]} /></article></section>
     </>
-  );
-}
-
-function MarketSkillCard({ skill, downloads, compact = false }: { skill: SkillBundle; downloads: string; compact?: boolean }) {
-  return (
-    <article className={compact ? "market-mini-card is-compact" : "market-mini-card"}>
-      <span className="skill-icon">{skill.name[0]?.toUpperCase()}</span>
-      <div>
-        <h4>{skill.name}</h4>
-        <p>{skill.preview || "暂无描述"}</p>
-        <small>4.8 ★ · {downloads} 下载</small>
-      </div>
-      {!compact ? <button className="primary-button" type="button">安装</button> : null}
-    </article>
   );
 }
 

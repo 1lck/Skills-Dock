@@ -6,6 +6,7 @@ import {
   aggregateInstalledSkills,
   countInstalledApps,
 } from "../lib/application/skills-catalog";
+import type { MarketPackage } from "../lib/models/market";
 import {
   getSourceIdsForToolKinds,
   mergePartialSnapshot,
@@ -51,6 +52,11 @@ interface ImportSkillsZipResult {
 interface ExportSkillsZipResult {
   outputPath: string;
   exportedSkillCount: number;
+}
+
+interface InstallMarketPackageResult {
+  targetRoot: string;
+  installedSkillPaths: string[];
 }
 
 interface RefreshOptions {
@@ -123,6 +129,8 @@ export function useSkillsDock() {
     useState<InstallationState | "all">("all");
   const [selectedToolKind, setSelectedToolKind] = useState<ToolKind | "all">("all");
   const [batchBusy, setBatchBusy] = useState(false);
+  const [marketInstallBusyPackageId, setMarketInstallBusyPackageId] =
+    useState<string | null>(null);
   const [usageMap, setUsageMap] = useState<SkillUsageMap>({});
   const [installedApps, setInstalledApps] = useState<Record<string, boolean>>({});
   const [selectedSkillAiSummary, setSelectedSkillAiSummary] = useState<AiSummaryState | null>(null);
@@ -559,6 +567,84 @@ export function useSkillsDock() {
     }
   }
 
+  function appLabel(app: AppKind): string {
+    switch (app) {
+      case "codex":
+        return "Codex";
+      case "claude":
+        return "Claude";
+      case "gemini":
+        return "Gemini";
+      case "opencode":
+        return "OpenCode";
+    }
+  }
+
+  async function installMarketPackage(pkg: MarketPackage, targetApp: AppKind) {
+    if (demoMode || marketInstallBusyPackageId) {
+      return;
+    }
+
+    const skills = pkg.members
+      .filter((member) => member.skillhubSlug)
+      .map((member) => ({
+        slug: member.skillhubSlug ?? member.id,
+        skillId: member.skillhubSlug ?? member.id,
+      }));
+
+    if (skills.length === 0) {
+      await message("这个 package 还没有配置可下载成员。", {
+        title: "暂不可安装",
+        kind: "warning",
+      });
+      return;
+    }
+
+    setMarketInstallBusyPackageId(pkg.id);
+    try {
+      const result = await invoke<InstallMarketPackageResult>("install_market_package", {
+        request: {
+          packageId: pkg.id,
+          packageName: pkg.name,
+          skills,
+        },
+      });
+
+      const nextRoots = addCustomSource(loadCustomSources(storage), result.targetRoot);
+      saveCustomSources(storage, nextRoots);
+
+      const requests = result.installedSkillPaths.map((sourceSkillPath, index) => ({
+        skillId: skills[index]?.skillId ?? pkg.members[index]?.id ?? `market-skill-${index}`,
+        sourceSkillPath,
+        targetApp,
+        enabled: true,
+      }));
+
+      if (requests.length === 1) {
+        await invoke("toggle_app_install", { request: requests[0] });
+      } else if (requests.length > 1) {
+        await invoke("toggle_app_installs", { requests });
+      }
+
+      await refresh({ customRootsOverride: nextRoots, includeUsage: false });
+
+      await message(
+        `已下载 ${result.installedSkillPaths.length} 个成员，并安装到 ${appLabel(targetApp)}。`,
+        {
+          title: `${pkg.name} 已安装`,
+          kind: "info",
+        },
+      );
+    } catch (error) {
+      await message(`市场安装失败：${describeError(error)}`, {
+        title: "安装失败",
+        kind: "error",
+      });
+    } finally {
+      setMarketInstallBusyPackageId(null);
+    }
+  }
+
   async function generateAiSummary() {
     if (demoMode || !selectedSkillSummaryRequest) {
       return;
@@ -867,11 +953,13 @@ export function useSkillsDock() {
     sources,
     appCounts,
     batchBusy,
+    marketInstallBusyPackageId,
     usageMap,
     availableMemberSkills,
     installedApps,
     selectedSkillAiSummary,
     selectedAiProvider,
+    allBundles: aggregatedBundles,
     skills: sortedSkills,
     selectedSkill,
     selectedSkillIds,
@@ -900,6 +988,7 @@ export function useSkillsDock() {
     addFolder,
     importFromZip,
     exportSelectedSkills,
+    installMarketPackage,
     openPath,
     browseSource,
     toggleApp,

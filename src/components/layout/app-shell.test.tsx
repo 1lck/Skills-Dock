@@ -2,6 +2,7 @@ import type { ComponentProps } from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
+import { buildMarketPackages } from "../../lib/application/market-packages";
 import { aggregateInstalledSkills } from "../../lib/application/skills-catalog";
 import { aggregateSkillBundles } from "../../lib/application/skill-bundles";
 import type { SkillDetail, SourceRecord } from "../../lib/models/skill";
@@ -62,6 +63,7 @@ const rawSkills: SkillDetail[] = [
 
 const skills = aggregateSkillBundles(aggregateInstalledSkills(rawSkills), sources);
 const availableSkills = aggregateInstalledSkills(rawSkills);
+const marketPackages = buildMarketPackages(skills);
 const appCounts = {
   claude: 0,
   codex: 2,
@@ -79,10 +81,12 @@ function renderShell(overrides: Partial<ComponentProps<typeof AppShell>> = {}) {
   const props: ComponentProps<typeof AppShell> = {
     loading: false,
     isDemoMode: false,
-    appVersion: "0.1.15",
+    appVersion: "0.1.16",
     updateBusy: false,
     sources,
     appCounts,
+    marketInstallBusyPackageId: null,
+    marketPackages,
     skills,
     availableSkills,
     selectedSkill: null,
@@ -111,6 +115,7 @@ function renderShell(overrides: Partial<ComponentProps<typeof AppShell>> = {}) {
     onCreateBundle: vi.fn(),
     onClearSelection: vi.fn(),
     onBatchApply: vi.fn(),
+    onInstallMarketPackage: vi.fn(),
     onOpenPath: vi.fn(),
     onBrowseSource: vi.fn(),
     onToggleApp: vi.fn(),
@@ -227,10 +232,12 @@ describe("AppShell", () => {
       <AppShell
         loading={false}
         isDemoMode={false}
-        appVersion="0.1.15"
+        appVersion="0.1.16"
         updateBusy={false}
         sources={sources}
         appCounts={appCounts}
+        marketInstallBusyPackageId={null}
+        marketPackages={marketPackages}
         skills={skills}
         availableSkills={availableSkills}
         selectedSkill={skills[0]}
@@ -259,6 +266,7 @@ describe("AppShell", () => {
         onCreateBundle={vi.fn()}
         onClearSelection={vi.fn()}
         onBatchApply={vi.fn()}
+        onInstallMarketPackage={vi.fn()}
         onOpenPath={vi.fn()}
         onBrowseSource={vi.fn()}
         onToggleApp={vi.fn()}
@@ -322,10 +330,12 @@ describe("AppShell", () => {
       <AppShell
         loading={false}
         isDemoMode={false}
-        appVersion="0.1.15"
+        appVersion="0.1.16"
         updateBusy={false}
         sources={sources}
         appCounts={appCounts}
+        marketInstallBusyPackageId={null}
+        marketPackages={marketPackages}
         skills={skills}
         availableSkills={availableSkills}
         selectedSkill={null}
@@ -354,6 +364,7 @@ describe("AppShell", () => {
         onCreateBundle={vi.fn()}
         onClearSelection={vi.fn()}
         onBatchApply={vi.fn()}
+        onInstallMarketPackage={vi.fn()}
         onOpenPath={vi.fn()}
         onBrowseSource={vi.fn()}
         onToggleApp={vi.fn()}
@@ -369,11 +380,15 @@ describe("AppShell", () => {
     expect(onRefreshUsage).toHaveBeenCalledTimes(1);
   });
 
-  test("shows market preview notice before marketplace is connected", () => {
+  test("opens market package detail in a modal", () => {
     window.location.hash = "#market";
     renderShell();
 
-    expect(screen.getByRole("note", { name: "市场状态说明" })).toBeVisible();
-    expect(screen.getByText(/正式市场源、在线安装、更新同步与发布流程尚未接入/)).toBeVisible();
+    expect(screen.queryByText("包含内容")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "查看 Browser Tools 详情" }));
+
+    expect(screen.getByRole("heading", { name: "Browser Tools" })).toBeVisible();
+    expect(screen.getByText("包含内容")).toBeVisible();
+    expect(screen.getByRole("button", { name: "关闭市场详情" })).toBeVisible();
   });
 });
