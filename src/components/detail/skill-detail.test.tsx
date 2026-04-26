@@ -106,6 +106,7 @@ describe("SkillDetailPanel", () => {
     expect(screen.getByText("Bundle 概览")).toBeVisible();
     expect(screen.getByText(/原始技能文档默认隐藏/)).toBeVisible();
     expect(screen.getByRole("button", { name: /在编辑器中打开原始 SKILL\.md/ })).toBeVisible();
+    expect(screen.queryByRole("button", { name: "安装到应用" })).toBeNull();
     expect(screen.queryByText("SKILL.md 预览")).toBeNull();
     expect(screen.getAllByText("Frontend Skill").length).toBeGreaterThan(0);
   });

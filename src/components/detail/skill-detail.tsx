@@ -13,7 +13,6 @@ import {
   Rocket,
   ShieldCheck,
   Wrench,
-  XCircle,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { useEffect, useState } from "react";
@@ -102,14 +101,10 @@ export function SkillDetailPanel({
           <div className="detail-actions-main">
             {isCustomBundle ? (
               <button className="primary-button" onClick={() => onSyncBundle?.(skill.id)} type="button"><Cloud size={17} />同步本地包</button>
-            ) : (
-              <button className="primary-button" type="button"><Cloud size={17} />安装到应用</button>
-            )}
+            ) : null}
             {isCustomBundle ? (
               <button className="ghost-button" onClick={() => onRepairBundle?.(skill.id)} type="button"><Wrench size={17} />修复目标应用</button>
-            ) : (
-              <button className="ghost-button" type="button"><XCircle size={17} />从应用移除</button>
-            )}
+            ) : null}
             {primary ? <button className="ghost-button" onClick={() => onOpenPath(primary.skillPath)} type="button"><FolderOpen size={17} />打开文件夹</button> : null}
             <button className="ghost-button" type="button"><FileArchive size={17} />导出 ZIP</button>
             <button className="ghost-button icon-only" type="button"><MoreHorizontal size={17} /></button>
