@@ -103,13 +103,12 @@ sudo apt-get install -f
 - 展示 Bundle 概览、成员 Skills、校验状态和安装位置
 - **自动调用统计**：通过 Rust 解析 Claude、Codex、Gemini、OpenCode 的本地会话记录，自动且真实地反映 Agent 在背后调用各 Skill 的次数
 - 调用统计改为按需刷新，避免普通安装或同步动作触发高 CPU 的全量日志扫描
-
+- 正式接入的远程 Skill 市场
+- 在线安装、更新同步与发布流程
 ## 🚧 暂未包含
 
 当前 MVP 还没有这些能力：
 
-- 正式接入的远程 Skill 市场
-- 在线安装、更新同步与发布流程
 - 应用内直接编辑 Skill
 - 同步、账号体系或云存储
 
